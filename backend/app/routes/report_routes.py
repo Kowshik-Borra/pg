@@ -2,6 +2,7 @@ from flask import Blueprint, send_file
 from flask_jwt_extended import jwt_required
 from app.middleware.rbac import role_required, get_current_user
 from app.middleware.error_handlers import APIException
+from app.extensions import db
 from app.models.finance import RentInvoice
 from app.services.report_service import generate_pdf_receipt, generate_excel_financial_report
 
@@ -11,7 +12,7 @@ report_bp = Blueprint("reports", __name__, url_prefix="/api/reports")
 @jwt_required()
 def download_invoice_pdf(invoice_id):
     current_user = get_current_user()
-    invoice = RentInvoice.query.get(invoice_id)
+    invoice = db.session.get(RentInvoice, invoice_id)
     if not invoice:
         raise APIException("Invoice not found.", status_code=404, code="NOT_FOUND")
 
@@ -38,3 +39,4 @@ def download_property_excel(property_id):
         as_attachment=True,
         download_name=f"Property_{property_id}_Rent_Report.xlsx"
     )
+

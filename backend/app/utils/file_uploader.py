@@ -28,3 +28,4 @@ def save_uploaded_file(file_obj, upload_folder: str, subfolder: str = "propertie
     
     # Return relative URL path
     return f"/static/uploads/{subfolder}/{unique_name}"
+

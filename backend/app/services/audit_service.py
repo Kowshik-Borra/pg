@@ -26,3 +26,4 @@ def log_audit(action: str, entity_name: str, entity_id: int = None, details: dic
         db.session.rollback()
         # Non-blocking logging failure
         print(f"Warning: Failed to write audit log: {e}")
+

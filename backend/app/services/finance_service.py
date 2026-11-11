@@ -11,7 +11,7 @@ from app.services.notification_service import send_notification
 from app.services.audit_service import log_audit
 
 def generate_invoice_for_allocation(allocation_id: int, month: int, year: int, electricity: float = 0.0, food: float = 0.0, late_fee: float = 0.0):
-    allocation = RoomAllocation.query.get(allocation_id)
+    allocation = db.session.get(RoomAllocation, allocation_id)
     if not allocation or not allocation.is_active:
         raise APIException("Active room allocation not found.", status_code=404, code="NOT_FOUND")
 
@@ -60,7 +60,7 @@ def generate_invoice_for_allocation(allocation_id: int, month: int, year: int, e
     return invoice
 
 def record_payment(invoice_id: int, amount: float, method: str, transaction_ref: str = None, notes: str = None, recorded_by_user_id: int = None):
-    invoice = RentInvoice.query.get(invoice_id)
+    invoice = db.session.get(RentInvoice, invoice_id)
     if not invoice:
         raise APIException("Invoice not found.", status_code=404, code="NOT_FOUND")
 
@@ -129,7 +129,7 @@ def get_property_financial_summary(property_id: int):
     net_operating_income = total_collected - total_expenses
 
     # Real bed stats
-    prop = PGProperty.query.get(property_id)
+    prop = db.session.get(PGProperty, property_id)
     total_beds = 0
     occupied_beds = 0
     available_beds = 0
@@ -159,3 +159,4 @@ def get_property_financial_summary(property_id: int):
         "available_beds": available_beds,
         "occupancy_percentage": occupancy_pct
     }
+

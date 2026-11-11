@@ -101,6 +101,10 @@
                                 <label class="form-check-label small" for="filter-wifi">High-Speed Wi-Fi</label>
                             </div>
                             <div class="form-check mb-1">
+                                <input class="form-check-input" type="checkbox" id="filter-food">
+                                <label class="form-check-label small" for="filter-food">Food Included / Mess</label>
+                            </div>
+                            <div class="form-check mb-1">
                                 <input class="form-check-input" type="checkbox" id="filter-verified" checked>
                                 <label class="form-check-label small" for="filter-verified">Verified Properties Only</label>
                             </div>
@@ -174,6 +178,7 @@
                 max_rent: document.getElementById("filter-max-rent").value,
                 has_ac: document.getElementById("filter-ac").checked ? "true" : "",
                 has_wifi: document.getElementById("filter-wifi").checked ? "true" : "",
+                has_food: document.getElementById("filter-food").checked ? "true" : "",
                 verified_only: document.getElementById("filter-verified").checked ? "true" : ""
             };
 
@@ -276,6 +281,7 @@
             document.getElementById("filter-max-rent").value = "";
             document.getElementById("filter-ac").checked = false;
             document.getElementById("filter-wifi").checked = false;
+            document.getElementById("filter-food").checked = false;
             document.getElementById("filter-verified").checked = true;
             loadSearchResults(1);
         }
@@ -345,3 +351,4 @@
     </script>
 </body>
 </html>
+

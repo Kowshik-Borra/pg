@@ -5,13 +5,14 @@ from reportlab.lib.pagesizes import letter
 from reportlab.lib import colors
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from app.extensions import db
 from app.models.finance import RentInvoice, Payment
 from app.models.property import PGProperty
 from app.models.tenant import RoomAllocation
 from app.middleware.error_handlers import APIException
 
 def generate_pdf_receipt(invoice_id: int) -> io.BytesIO:
-    invoice = RentInvoice.query.get(invoice_id)
+    invoice = db.session.get(RentInvoice, invoice_id)
     if not invoice:
         raise APIException("Invoice not found.", status_code=404, code="NOT_FOUND")
 
@@ -110,7 +111,7 @@ def generate_pdf_receipt(invoice_id: int) -> io.BytesIO:
     return buffer
 
 def generate_excel_financial_report(property_id: int) -> io.BytesIO:
-    prop = PGProperty.query.get(property_id)
+    prop = db.session.get(PGProperty, property_id)
     if not prop:
         raise APIException("Property not found.", status_code=404, code="NOT_FOUND")
 
@@ -140,3 +141,4 @@ def generate_excel_financial_report(property_id: int) -> io.BytesIO:
 
     output.seek(0)
     return output
+

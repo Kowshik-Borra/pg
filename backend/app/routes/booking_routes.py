@@ -6,12 +6,13 @@ from app.models.booking import Booking
 from app.models.property import PGProperty
 from app.models.user import OwnerProfile, ManagerAssignment
 from app.middleware.error_handlers import APIException
-from app.middleware.rbac import role_required, get_current_user
+from app.middleware.rbac import role_required, get_current_user, verify_property_access
 from app.services.booking_service import (
     create_booking_request,
     approve_booking_request,
     reject_booking_request,
-    cancel_booking_by_customer
+    cancel_booking_by_customer,
+    expire_stale_reservations
 )
 
 booking_bp = Blueprint("bookings", __name__, url_prefix="/api/bookings")
@@ -67,13 +68,16 @@ def get_my_bookings():
 @jwt_required()
 def get_booking_details(booking_id):
     current_user = get_current_user()
-    booking = Booking.query.get(booking_id)
+    booking = db.session.get(Booking, booking_id)
     if not booking:
         raise APIException("Booking not found.", status_code=404, code="NOT_FOUND")
 
     # Authorization check
-    if current_user.role == "TENANT" and booking.customer_id != current_user.id:
-        raise APIException("Access denied.", status_code=403, code="FORBIDDEN")
+    if current_user.role == "TENANT":
+        if booking.customer_id != current_user.id:
+            raise APIException("Access denied.", status_code=403, code="FORBIDDEN")
+    else:
+        verify_property_access(booking.property_id, current_user)
 
     data = booking.to_dict()
     data["history"] = [h.to_dict() for h in booking.history]
@@ -131,8 +135,24 @@ def cancel_booking(booking_id):
 @jwt_required()
 @role_required("OWNER", "MANAGER", "SUPER_ADMIN")
 def get_property_bookings(property_id):
+    current_user = get_current_user()
+    verify_property_access(property_id, current_user)
     bookings = Booking.query.filter_by(property_id=property_id).order_by(Booking.created_at.desc()).all()
     return jsonify({
         "success": True,
         "data": [b.to_dict() for b in bookings]
     }), 200
+
+@booking_bp.route("/expire-reservations", methods=["POST"])
+def trigger_expire_reservations():
+    """
+    Safe maintenance trigger to expire overdue reservations and release reserved beds.
+    Idempotent and safe to run on demand or via automation.
+    """
+    count = expire_stale_reservations()
+    return jsonify({
+        "success": True,
+        "message": f"Reservation expiry process completed. Expired {count} reservation(s).",
+        "data": {"expired_count": count}
+    }), 200
+

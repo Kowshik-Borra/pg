@@ -4,7 +4,9 @@ from app.extensions import db
 from app.models.booking import Booking, BookingHistory
 from app.models.room_bed import Room, Bed
 from app.models.property import PGProperty
+from app.models.user import User
 from app.middleware.error_handlers import APIException
+from app.middleware.rbac import verify_property_access
 from app.services.notification_service import send_notification
 from app.services.audit_service import log_audit
 
@@ -12,18 +14,18 @@ def generate_booking_reference():
     return f"BK-{datetime.now(timezone.utc).strftime('%Y%m')}-{uuid.uuid4().hex[:6].upper()}"
 
 def create_booking_request(customer_id: int, property_id: int, room_id: int, move_in_date, sharing_type: str, bed_id: int = None):
-    prop = PGProperty.query.get(property_id)
+    prop = db.session.get(PGProperty, property_id)
     if not prop or not prop.is_active:
         raise APIException("Property not available for booking.", status_code=404, code="NOT_FOUND")
 
-    room = Room.query.get(room_id)
+    room = db.session.get(Room, room_id)
     if not room or room.property_id != property_id or not room.is_active:
         raise APIException("Selected room is not valid for this property.", status_code=400, code="VALIDATION_ERROR")
 
     # If specific bed specified, verify
     target_bed = None
     if bed_id:
-        target_bed = Bed.query.get(bed_id)
+        target_bed = db.session.get(Bed, bed_id)
         if not target_bed or target_bed.room_id != room_id:
             raise APIException("Selected bed does not belong to the selected room.", status_code=400, code="VALIDATION_ERROR")
         if target_bed.status != "AVAILABLE":
@@ -77,10 +79,14 @@ def create_booking_request(customer_id: int, property_id: int, room_id: int, mov
 def approve_booking_request(booking_id: int, user_id: int, remarks: str = None):
     """
     Approves booking and locks the bed via row-level locking (SELECT FOR UPDATE).
+    Enforces that user_id has permission to manage the booking's property.
     """
-    booking = Booking.query.get(booking_id)
+    booking = db.session.get(Booking, booking_id)
     if not booking:
         raise APIException("Booking not found.", status_code=404, code="NOT_FOUND")
+
+    user = db.session.get(User, user_id)
+    verify_property_access(booking.property_id, user)
 
     if booking.status != "PENDING":
         raise APIException(f"Cannot approve booking in status '{booking.status}'.", status_code=400, code="INVALID_STATE")
@@ -125,9 +131,16 @@ def approve_booking_request(booking_id: int, user_id: int, remarks: str = None):
     return booking
 
 def reject_booking_request(booking_id: int, user_id: int, reason: str):
-    booking = Booking.query.get(booking_id)
+    """
+    Rejects booking and releases reserved bed if previously approved.
+    Enforces property access rights for the acting user.
+    """
+    booking = db.session.get(Booking, booking_id)
     if not booking:
         raise APIException("Booking not found.", status_code=404, code="NOT_FOUND")
+
+    user = db.session.get(User, user_id)
+    verify_property_access(booking.property_id, user)
 
     if booking.status not in ["PENDING", "APPROVED"]:
         raise APIException(f"Cannot reject booking in status '{booking.status}'.", status_code=400, code="INVALID_STATE")
@@ -136,7 +149,7 @@ def reject_booking_request(booking_id: int, user_id: int, reason: str):
 
     # If it was approved, release the reserved bed
     if old_status == "APPROVED" and booking.bed_id:
-        bed = Bed.query.get(booking.bed_id)
+        bed = db.session.get(Bed, booking.bed_id)
         if bed and bed.status == "RESERVED":
             bed.status = "AVAILABLE"
             bed.last_status_change = datetime.now(timezone.utc)
@@ -168,7 +181,7 @@ def reject_booking_request(booking_id: int, user_id: int, reason: str):
     return booking
 
 def cancel_booking_by_customer(booking_id: int, customer_id: int, reason: str = None):
-    booking = Booking.query.get(booking_id)
+    booking = db.session.get(Booking, booking_id)
     if not booking or booking.customer_id != customer_id:
         raise APIException("Booking not found.", status_code=404, code="NOT_FOUND")
 
@@ -177,7 +190,7 @@ def cancel_booking_by_customer(booking_id: int, customer_id: int, reason: str = 
 
     old_status = booking.status
     if old_status == "APPROVED" and booking.bed_id:
-        bed = Bed.query.get(booking.bed_id)
+        bed = db.session.get(Bed, booking.bed_id)
         if bed and bed.status == "RESERVED":
             bed.status = "AVAILABLE"
             bed.last_status_change = datetime.now(timezone.utc)
@@ -198,3 +211,46 @@ def cancel_booking_by_customer(booking_id: int, customer_id: int, reason: str = 
 
     log_audit("BOOKING_CANCELLED", "bookings", booking.id, {"reason": reason}, user_id=customer_id)
     return booking
+
+def expire_stale_reservations():
+    """
+    Finds all APPROVED bookings whose reservation_expires_at has elapsed,
+    transitions them to EXPIRED, and safely releases the reserved bed back to AVAILABLE
+    if and only if the bed is still RESERVED for that exact booking.
+    Safe to execute repeatedly (idempotent).
+    """
+    now = datetime.now(timezone.utc)
+    stale_bookings = Booking.query.filter(
+        Booking.status == "APPROVED",
+        Booking.reservation_expires_at.isnot(None),
+        Booking.reservation_expires_at <= now
+    ).all()
+
+    expired_count = 0
+    for booking in stale_bookings:
+        booking.status = "EXPIRED"
+        booking.admin_remarks = (booking.admin_remarks or "") + " [Reservation window elapsed without check-in]"
+
+        # Release the bed only if it remains RESERVED for this booking
+        if booking.bed_id:
+            bed = db.session.get(Bed, booking.bed_id)
+            if bed and bed.status == "RESERVED":
+                bed.status = "AVAILABLE"
+                bed.last_status_change = now
+                bed.notes = f"Released after booking {booking.booking_reference} reservation expiry"
+
+        history = BookingHistory(
+            booking_id=booking.id,
+            from_status="APPROVED",
+            to_status="EXPIRED",
+            changed_by_user_id=None,
+            change_reason="Reservation window expired."
+        )
+        db.session.add(history)
+        expired_count += 1
+
+    if expired_count > 0:
+        db.session.commit()
+
+    return expired_count
+

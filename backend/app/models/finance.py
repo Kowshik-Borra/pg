@@ -158,3 +158,4 @@ class Expense(db.Model):
             "recorded_by": self.recorded_by.full_name if self.recorded_by else None,
             "created_at": self.created_at.isoformat() if self.created_at else None
         }
+

@@ -39,41 +39,38 @@ def register():
         is_verified=False
     )
     user.set_password(password)
-    db.session.add(user)
-    db.session.flush()
 
-    if role == "OWNER":
-        business_name = (data.get("business_name") or full_name).strip()
-        pan = (data.get("pan_number") or "").strip()
-        aadhaar = (data.get("aadhaar_last4") or "").strip()
-        profile = OwnerProfile(
-            user_id=user.id,
-            business_name=business_name,
-            pan_number=pan,
-            aadhaar_last4=aadhaar,
-            is_approved=False
-        )
-        db.session.add(profile)
-    elif role == "TENANT":
-        emergency_name = (data.get("emergency_contact_name") or "Primary Contact").strip()
-        emergency_phone = (data.get("emergency_contact_phone") or phone).strip()
-        relation = (data.get("emergency_contact_relation") or "Family").strip()
-        id_type = (data.get("id_proof_type") or "Aadhaar Card").strip()
-        id_masked = (data.get("id_proof_number_masked") or "XXXX-XXXX-XXXX").strip()
-        college_or_co = (data.get("college_or_company_name") or "").strip()
-        
-        tenant = Tenant(
-            user_id=user.id,
-            emergency_contact_name=emergency_name,
-            emergency_contact_phone=emergency_phone,
-            emergency_contact_relation=relation,
-            id_proof_type=id_type,
-            id_proof_number_masked=id_masked,
-            college_or_company_name=college_or_co
-        )
-        db.session.add(tenant)
+    try:
+        db.session.add(user)
+        db.session.flush()
 
-    db.session.commit()
+        if role == "OWNER":
+            business_name = (data.get("business_name") or full_name).strip()
+            profile = OwnerProfile(
+                user_id=user.id,
+                business_name=business_name,
+                is_approved=False
+            )
+            db.session.add(profile)
+        elif role == "TENANT":
+            emergency_name = (data.get("emergency_contact_name") or "Primary Contact").strip()
+            emergency_phone = (data.get("emergency_contact_phone") or phone).strip()
+            relation = (data.get("emergency_contact_relation") or "Family").strip()
+            college_or_co = (data.get("college_or_company_name") or "").strip()
+            
+            tenant = Tenant(
+                user_id=user.id,
+                emergency_contact_name=emergency_name,
+                emergency_contact_phone=emergency_phone,
+                emergency_contact_relation=relation,
+                college_or_company_name=college_or_co
+            )
+            db.session.add(tenant)
+
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        raise
 
     log_audit("USER_REGISTER", "users", user.id, {"email": email, "role": role}, user_id=user.id)
     send_notification(user.id, "Welcome to PG Connect", f"Welcome, {full_name}! Your account has been registered successfully.", "SYSTEM")
@@ -134,7 +131,7 @@ def login():
 @jwt_required()
 def get_current_profile():
     user_id = get_jwt_identity()
-    user = User.query.get(user_id)
+    user = db.session.get(User, user_id)
     if not user:
         raise APIException("User account not found.", status_code=404, code="NOT_FOUND")
 
@@ -153,7 +150,7 @@ def get_current_profile():
 @jwt_required(refresh=True)
 def refresh_token():
     user_id = get_jwt_identity()
-    user = User.query.get(user_id)
+    user = db.session.get(User, user_id)
     if not user or not user.is_active:
         raise APIException("User account is inactive or not found.", status_code=401, code="UNAUTHORIZED")
 

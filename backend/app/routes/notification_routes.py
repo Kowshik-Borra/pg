@@ -38,3 +38,4 @@ def mark_all_read():
     Notification.query.filter_by(user_id=current_user.id, is_read=False).update({"is_read": True})
     db.session.commit()
     return jsonify({"success": True, "message": "All notifications marked as read."}), 200
+

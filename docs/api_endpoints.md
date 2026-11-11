@@ -2,13 +2,13 @@
 
 Base URL: `http://localhost:5000/api`
 
-All protected endpoints require an `Authorization: Bearer <access_token>` header.
+All protected endpoints require an `Authorization: Bearer <access_token>` header. Role authorization is strictly enforced on the backend.
 
 ---
 
 ## 1. Authentication & Identity (`/api/auth`)
 
-### Register User
+### Register User (Privacy Preserving: No Aadhaar or PAN)
 - **Method:** `POST`
 - **Route:** `/api/auth/register`
 - **Access:** Public
@@ -23,11 +23,21 @@ All protected endpoints require an `Authorization: Bearer <access_token>` header
   "emergency_contact_name": "Parent",
   "emergency_contact_phone": "+919876543219",
   "emergency_contact_relation": "Father",
-  "id_proof_type": "Aadhaar Card",
-  "id_proof_number_masked": "XXXX-XXXX-1234"
+  "college_or_company_name": "Infosys Ltd"
 }
 ```
-- **Response:** `201 Created` with `access_token`, `refresh_token`, and user profile.
+- **Request Body (Owner):**
+```json
+{
+  "email": "owner@example.com",
+  "password": "Password@123",
+  "full_name": "Owner Name",
+  "phone": "+919876543211",
+  "role": "OWNER",
+  "business_name": "Sharma Hospitality Stays"
+}
+```
+- **Response:** `201 Created` with `access_token`, `refresh_token`, and user profile (no government identity numbers collected or returned).
 
 ### Sign In
 - **Method:** `POST`
@@ -55,9 +65,9 @@ All protected endpoints require an `Authorization: Bearer <access_token>` header
 ### Search Accommodations
 - **Method:** `GET`
 - **Route:** `/api/properties/search`
-- **Query Params:** `city`, `locality`, `gender` (BOYS/GIRLS/CO_ED), `sharing` (SINGLE/DOUBLE/TRIPLE), `min_rent`, `max_rent`, `has_ac`, `has_wifi`, `verified_only`, `page`, `per_page`
+- **Query Params:** `city`, `locality`, `gender` (BOYS/GIRLS/CO_ED), `sharing` (SINGLE/DOUBLE/TRIPLE), `min_rent`, `max_rent`, `has_ac`, `has_wifi`, `has_food` (true/false), `verified_only` (true/false), `page`, `per_page`
 - **Access:** Public
-- **Response:** `200 OK` with paginated property cards and live bed vacancy metrics.
+- **Response:** `200 OK` with paginated property cards, facilities, and real-time bed vacancy metrics.
 
 ### Property Details
 - **Method:** `GET`
@@ -71,20 +81,46 @@ All protected endpoints require an `Authorization: Bearer <access_token>` header
 - **Access:** Public
 - **Response:** `200 OK` with array of property objects for side-by-side evaluation.
 
-### Register New Property
+### Register New Property (Map Coordinates Required)
 - **Method:** `POST`
 - **Route:** `/api/properties`
 - **Access:** OWNER, SUPER_ADMIN
-- **Response:** `201 Created`
+- **Request Body:** Requires `name`, `property_type`, `address_line1`, `locality`, `city`, `state`, `pincode`, `latitude`, `longitude`, `description`. Coordinates must be non-zero and within valid geographical ranges.
+- **Response:** `201 Created` (Submitted for admin verification).
 
 ---
 
-## 3. Rooms and Physical Beds (`/api`)
+## 3. Maps & Geographic Endpoints (`/api/maps`)
+
+### Public Verified Map Markers
+- **Method:** `GET`
+- **Route:** `/api/maps/markers`
+- **Query Params:** `city`, `locality`, `gender`
+- **Access:** Public
+- **Filter:** Returns only `is_active=True` and `is_verified=True` properties.
+- **Response:** `200 OK` with array of verified markers.
+
+### Owner Properties Map Markers
+- **Method:** `GET`
+- **Route:** `/api/maps/owner-properties`
+- **Access:** OWNER, SUPER_ADMIN
+- **Filter:** Returns all active properties belonging to the authenticated owner (including pending-verification properties).
+- **Response:** `200 OK` with array of owner markers.
+
+### Nearby Discovery
+- **Method:** `GET`
+- **Route:** `/api/maps/nearby?lat=12.9352&lng=77.6245&radius=10`
+- **Access:** Public
+- **Response:** `200 OK` with distance-sorted list of verified properties within radius.
+
+---
+
+## 4. Rooms and Physical Beds (`/api`)
 
 ### Create Room with Physical Beds
 - **Method:** `POST`
 - **Route:** `/api/properties/<int:property_id>/rooms`
-- **Access:** OWNER, MANAGER, SUPER_ADMIN
+- **Access:** OWNER, MANAGER, SUPER_ADMIN (Verifies property access)
 - **Request Body:**
 ```json
 {
@@ -97,7 +133,7 @@ All protected endpoints require an `Authorization: Bearer <access_token>` header
   "has_attached_bathroom": true
 }
 ```
-- **Response:** `201 Created` (auto-initializes Bed A and Bed B as `AVAILABLE`).
+- **Response:** `201 Created` (auto-initializes physical beds based on sharing type).
 
 ### Update Bed Status
 - **Method:** `PATCH`
@@ -108,7 +144,7 @@ All protected endpoints require an `Authorization: Bearer <access_token>` header
 
 ---
 
-## 4. Bookings & Concurrency Engine (`/api/bookings`)
+## 5. Bookings & Concurrency Engine (`/api/bookings`)
 
 ### Submit Booking Request
 - **Method:** `POST`
@@ -120,7 +156,8 @@ All protected endpoints require an `Authorization: Bearer <access_token>` header
   "property_id": 1,
   "room_id": 1,
   "bed_id": 1,
-  "preferred_move_in_date": "2026-12-01"
+  "preferred_move_in_date": "2026-12-01",
+  "sharing_type": "DOUBLE"
 }
 ```
 - **Response:** `201 Created` (`status: "PENDING"`)
@@ -128,23 +165,41 @@ All protected endpoints require an `Authorization: Bearer <access_token>` header
 ### Approve Booking (Pessimistic Row Lock & 48h Reservation)
 - **Method:** `POST`
 - **Route:** `/api/bookings/<int:id>/approve`
-- **Access:** OWNER, MANAGER, SUPER_ADMIN
+- **Access:** OWNER, MANAGER, SUPER_ADMIN (Ownership verified: 403 Forbidden for cross-owner)
 - **Response:** `200 OK` (`bed.status -> "RESERVED"`, `reservation_expires_at = now + 48h`)
 
 ### Reject Booking
 - **Method:** `POST`
 - **Route:** `/api/bookings/<int:id>/reject`
-- **Access:** OWNER, MANAGER, SUPER_ADMIN
-- **Response:** `200 OK` (Releases bed if reserved)
+- **Access:** OWNER, MANAGER, SUPER_ADMIN (Ownership verified)
+- **Response:** `200 OK` (Releases reserved bed back to `AVAILABLE`)
+
+### Cancel Booking
+- **Method:** `POST`
+- **Route:** `/api/bookings/<int:id>/cancel`
+- **Access:** TENANT (Owning customer only)
+- **Response:** `200 OK` (Releases reserved bed if previously approved)
+
+### Trigger Reservation Expiry
+- **Method:** `POST`
+- **Route:** `/api/bookings/expire-reservations`
+- **Access:** Public maintenance / local automation
+- **Behavior:** Finds all approved bookings whose 48-hour reservation deadline has elapsed, transitions them to `EXPIRED`, and releases their reserved beds back to `AVAILABLE`. Idempotent and safe to run on demand.
+- **Response:** `200 OK` with `expired_count`.
 
 ---
 
-## 5. Tenant Check-In, Check-Out & Visitors (`/api/tenants`)
+## 6. Tenant Check-In, Check-Out & Visitors (`/api/tenants`)
 
 ### Check-In Tenant
 - **Method:** `POST`
 - **Route:** `/api/tenants/check-in`
-- **Access:** OWNER, MANAGER, SUPER_ADMIN
+- **Access:** OWNER, MANAGER, SUPER_ADMIN (Verifies property access)
+- **Validation:**
+  - Validates booking status is `APPROVED`.
+  - Validates bed, room, and property relationships.
+  - Ensures a `RESERVED` bed belongs strictly to the checking-in customer.
+  - Prevents duplicate active allocations.
 - **Request Body:**
 ```json
 {
@@ -152,10 +207,11 @@ All protected endpoints require an `Authorization: Bearer <access_token>` header
   "bed_id": 1,
   "monthly_rent_agreed": 14500.00,
   "security_deposit_paid": 25000.00,
-  "check_in_date": "2026-11-11"
+  "check_in_date": "2026-11-11",
+  "booking_id": 1
 }
 ```
-- **Response:** `201 Created` (`bed.status -> "OCCUPIED"`, generates deposit and first month invoice)
+- **Response:** `201 Created` (`bed.status -> "OCCUPIED"`, `booking.status -> "COMPLETED"`)
 
 ### Check-Out Tenant
 - **Method:** `POST`
@@ -165,19 +221,19 @@ All protected endpoints require an `Authorization: Bearer <access_token>` header
 
 ---
 
-## 6. Financial Ledger & Invoicing (`/api/finance`)
+## 7. Financial Ledger & Invoicing (`/api/finance`)
 
 ### Generate Monthly Invoice
 - **Method:** `POST`
 - **Route:** `/api/finance/invoices`
-- **Access:** OWNER, MANAGER, SUPER_ADMIN
+- **Access:** OWNER, MANAGER, SUPER_ADMIN (Verifies property access)
 - **Request Body:** `{"allocation_id": 1, "billing_month": 11, "billing_year": 2026, "electricity_charges": 450}`
 - **Response:** `201 Created`
 
 ### Record Rent Payment
 - **Method:** `POST`
 - **Route:** `/api/finance/payments`
-- **Access:** OWNER, MANAGER, SUPER_ADMIN
+- **Access:** OWNER, MANAGER (with payment permission), SUPER_ADMIN
 - **Request Body:**
 ```json
 {
@@ -187,17 +243,17 @@ All protected endpoints require an `Authorization: Bearer <access_token>` header
   "transaction_reference": "UPI/604512349081"
 }
 ```
-- **Response:** `201 Created` (updates invoice status to `PAID` or `PARTIALLY_PAID`)
+- **Response:** `201 Created`
 
 ### Property Financial Summary
 - **Method:** `GET`
 - **Route:** `/api/finance/summary/property/<int:id>`
-- **Access:** OWNER, MANAGER, SUPER_ADMIN
+- **Access:** OWNER, MANAGER, SUPER_ADMIN (Verifies property access)
 - **Response:** `200 OK` with real billed, collected, expenses, and occupancy metrics.
 
 ---
 
-## 7. Reports & Documents (`/api/reports`)
+## 8. Reports & Documents (`/api/reports`)
 
 ### Download Official PDF Rent Receipt
 - **Method:** `GET`
@@ -213,7 +269,7 @@ All protected endpoints require an `Authorization: Bearer <access_token>` header
 
 ---
 
-## 8. Governance & Administration (`/api/admin`)
+## 9. Governance & Administration (`/api/admin`)
 
 ### Platform Analytics
 - **Method:** `GET`

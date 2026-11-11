@@ -9,6 +9,13 @@ function initHeader() {
     const headerContainer = document.getElementById("site-header");
     if (!headerContainer) return;
 
+    // Do not inject public landing header into role dashboards
+    const pathname = window.location.pathname.toLowerCase();
+    if (pathname.includes("dashboard")) {
+        headerContainer.innerHTML = "";
+        return;
+    }
+
     const user = API.getUser();
     const isAuth = Auth.isAuthenticated();
 
@@ -72,6 +79,13 @@ function initHeader() {
 function initFooter() {
     const footerContainer = document.getElementById("site-footer");
     if (!footerContainer) return;
+
+    // Do not inject public footer into role dashboards
+    const pathname = window.location.pathname.toLowerCase();
+    if (pathname.includes("dashboard")) {
+        footerContainer.innerHTML = "";
+        return;
+    }
 
     footerContainer.innerHTML = `
         <footer class="site-footer">
@@ -152,3 +166,29 @@ function formatDate(dateStr) {
     const d = new Date(dateStr);
     return d.toLocaleDateString("en-IN", { year: "numeric", month: "short", day: "numeric" });
 }
+
+// Role Dashboard View Controller (Single Module View)
+function switchDashboardModule(moduleId, titleText) {
+    document.querySelectorAll(".app-module").forEach(el => el.classList.remove("active"));
+    document.querySelectorAll(".app-sidebar .nav-link, .offcanvas .nav-link").forEach(el => el.classList.remove("active"));
+
+    const target = document.getElementById(moduleId);
+    if (target) {
+        target.classList.add("active");
+    }
+
+    document.querySelectorAll(`[data-module="${moduleId}"]`).forEach(el => el.classList.add("active"));
+
+    const titleEl = document.getElementById("topbar-page-title");
+    if (titleEl && titleText) {
+        titleEl.innerText = titleText;
+    }
+
+    // Close offcanvas if mobile
+    const offcanvasEl = document.getElementById("dashboardOffcanvas");
+    if (offcanvasEl && typeof bootstrap !== "undefined") {
+        const bsOffcanvas = bootstrap.Offcanvas.getInstance(offcanvasEl);
+        if (bsOffcanvas) bsOffcanvas.hide();
+    }
+}
+

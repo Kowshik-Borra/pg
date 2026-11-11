@@ -19,7 +19,7 @@ def verify_property_access(property_id, user):
         profile = OwnerProfile.query.filter_by(user_id=user.id).first()
         if not profile:
             return False
-        prop = PGProperty.query.get(property_id)
+        prop = db.session.get(PGProperty, property_id)
         return prop and prop.owner_id == profile.id
     if user.role == "MANAGER":
         assignment = ManagerAssignment.query.filter_by(
@@ -101,7 +101,7 @@ def create_room(property_id):
 @role_required("OWNER", "MANAGER", "SUPER_ADMIN")
 def update_room(room_id):
     current_user = get_current_user()
-    room = Room.query.get(room_id)
+    room = db.session.get(Room, room_id)
     if not room:
         raise APIException("Room not found.", status_code=404, code="NOT_FOUND")
 
@@ -134,7 +134,7 @@ def update_room(room_id):
 @role_required("OWNER", "MANAGER", "SUPER_ADMIN")
 def update_bed_status(bed_id):
     current_user = get_current_user()
-    bed = Bed.query.get(bed_id)
+    bed = db.session.get(Bed, bed_id)
     if not bed:
         raise APIException("Bed not found.", status_code=404, code="NOT_FOUND")
 
@@ -166,3 +166,4 @@ def update_bed_status(bed_id):
         "message": f"Bed status updated to {new_status}.",
         "data": bed.to_dict()
     }), 200
+

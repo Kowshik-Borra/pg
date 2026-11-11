@@ -44,3 +44,23 @@ def test_rbac_access_forbidden(client, seeded_users):
     assert res.status_code == 403
     data = res.get_json()
     assert data["success"] is False
+
+def test_owner_registration_without_pan_aadhaar(client):
+    payload = {
+        "email": "newowner_noprivacy@example.com",
+        "password": "Password@123",
+        "full_name": "New Owner",
+        "phone": "9812349999",
+        "role": "OWNER",
+        "business_name": "Modern Living PG"
+    }
+    res = client.post("/api/auth/register", json=payload)
+    assert res.status_code == 201
+    data = res.get_json()
+    assert data["success"] is True
+    # Ensure government identity values are not present in response payload
+    user_dict = data["data"]["user"]
+    assert "pan_number" not in user_dict
+    assert "aadhaar_last4" not in user_dict
+    assert "id_proof_number_masked" not in user_dict
+

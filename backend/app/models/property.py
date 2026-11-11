@@ -151,3 +151,4 @@ class PropertyFacility(db.Model):
             "has_refrigerator": self.has_refrigerator,
             "has_biometric_access": self.has_biometric_access
         }
+

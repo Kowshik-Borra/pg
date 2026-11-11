@@ -1,6 +1,6 @@
 import os
 from datetime import datetime, date, timedelta, timezone
-from app import create_app
+from app import create_app, verify_database_connection
 from app.extensions import db
 from app.models.user import User, OwnerProfile, ManagerAssignment, Staff
 from app.models.property import PGProperty, PropertyPhoto, PropertyFacility
@@ -16,9 +16,21 @@ app = create_app(os.getenv("FLASK_ENV", "development"))
 
 def seed_database():
     with app.app_context():
-        print("Recreating database tables...")
-        db.drop_all()
+        is_ok, db_msg = verify_database_connection(app)
+        if not is_ok:
+            print(f"[ERROR] Database connection failed:\n{db_msg}")
+            return
+
+        # Ensure all tables exist safely without dropping existing data
         db.create_all()
+
+        # Safe idempotency check: do not seed if already seeded
+        existing_admin = User.query.filter_by(email="admin@pgconnect.com").first()
+        if existing_admin:
+            print("Database has already been seeded. Skipping seeding to prevent duplicate records.")
+            return
+
+        print("Seeding initial demo data (safe idempotent mode)...")
 
         print("Seeding Users...")
         # 1. Super Admin
@@ -49,8 +61,6 @@ def seed_database():
         owner_profile = OwnerProfile(
             user_id=owner_user.id,
             business_name="Sharma Hospitality & Living",
-            pan_number="ABCPS1234K",
-            aadhaar_last4="7890",
             is_approved=True,
             approved_by=admin.id,
             approved_at=datetime.now(timezone.utc)
@@ -100,8 +110,6 @@ def seed_database():
             emergency_contact_name="Mahesh Patel",
             emergency_contact_phone="+919988776655",
             emergency_contact_relation="Father",
-            id_proof_type="Aadhaar Card",
-            id_proof_number_masked="XXXX-XXXX-4589",
             college_or_company_name="Infosys Ltd"
         )
         t2 = Tenant(
@@ -109,8 +117,6 @@ def seed_database():
             emergency_contact_name="Sunita Verma",
             emergency_contact_phone="+919977665544",
             emergency_contact_relation="Mother",
-            id_proof_type="Passport",
-            id_proof_number_masked="P1234567X",
             college_or_company_name="Wipro Technologies"
         )
         db.session.add_all([t1, t2])
@@ -504,3 +510,4 @@ def seed_database():
 
 if __name__ == "__main__":
     seed_database()
+

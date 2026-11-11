@@ -73,7 +73,7 @@ def list_verifications():
 @role_required("SUPER_ADMIN")
 def verify_property(property_id):
     current_user = get_current_user()
-    prop = PGProperty.query.get(property_id)
+    prop = db.session.get(PGProperty, property_id)
     if not prop:
         raise APIException("Property not found.", status_code=404, code="NOT_FOUND")
 
@@ -134,7 +134,7 @@ def toggle_user_status(user_id):
     if current_user.id == user_id:
         raise APIException("Super Admin cannot suspend own account.", status_code=400, code="FORBIDDEN")
 
-    user = User.query.get(user_id)
+    user = db.session.get(User, user_id)
     if not user:
         raise APIException("User not found.", status_code=404, code="NOT_FOUND")
 
@@ -160,3 +160,4 @@ def get_audit_logs():
         "success": True,
         "data": [l.to_dict() for l in logs]
     }), 200
+

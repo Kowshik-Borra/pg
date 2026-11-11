@@ -15,7 +15,6 @@ def check_in_tenant(user_id: int, bed_id: int, check_in_date_val: date, monthly_
     if not bed:
         raise APIException("Bed not found.", status_code=404, code="NOT_FOUND")
 
-    # If it was RESERVED for this booking, that is allowed; or if AVAILABLE
     if bed.status not in ["AVAILABLE", "RESERVED"]:
         raise APIException(f"Cannot check in to bed with status '{bed.status}'. Bed is not available.", status_code=409, code="CONFLICT")
 
@@ -30,6 +29,34 @@ def check_in_tenant(user_id: int, bed_id: int, check_in_date_val: date, monthly_
 
     room = bed.room
     prop = room.property
+
+    # Validate booking and relationship integrity
+    booking = None
+    if booking_id:
+        booking = db.session.get(Booking, booking_id)
+        if not booking:
+            raise APIException("Specified booking not found.", status_code=404, code="NOT_FOUND")
+        if booking.customer_id != user_id:
+            raise APIException("Booking customer does not match the checking-in tenant.", status_code=400, code="VALIDATION_ERROR")
+        if booking.property_id != prop.id:
+            raise APIException("Booking property does not match bed's property.", status_code=400, code="VALIDATION_ERROR")
+        if booking.bed_id != bed.id:
+            raise APIException("Booking bed does not match the allocated bed.", status_code=400, code="VALIDATION_ERROR")
+        if booking.status != "APPROVED":
+            raise APIException(f"Cannot check in against booking in status '{booking.status}'. Booking must be APPROVED.", status_code=400, code="INVALID_STATE")
+
+    # If the bed is currently RESERVED, it MUST have a matching approved booking for this tenant
+    if bed.status == "RESERVED":
+        if not booking:
+            booking = Booking.query.filter_by(
+                bed_id=bed.id,
+                customer_id=user_id,
+                status="APPROVED"
+            ).first()
+            if not booking:
+                raise APIException("This bed is RESERVED for another customer or pending booking.", status_code=409, code="CONFLICT")
+        elif booking.bed_id != bed.id or booking.customer_id != user_id:
+            raise APIException("This bed is RESERVED for another customer.", status_code=409, code="CONFLICT")
 
     allocation = RoomAllocation(
         tenant_id=tenant.id,
@@ -59,7 +86,7 @@ def check_in_tenant(user_id: int, bed_id: int, check_in_date_val: date, monthly_
 
     # If linked to a booking, mark COMPLETED
     if booking_id:
-        booking = Booking.query.get(booking_id)
+        booking = db.session.get(Booking, booking_id)
         if booking:
             booking.status = "COMPLETED"
             hist = BookingHistory(
@@ -103,7 +130,7 @@ def check_in_tenant(user_id: int, bed_id: int, check_in_date_val: date, monthly_
     return allocation
 
 def check_out_tenant(allocation_id: int, check_out_date_val: date, refund_amount: float, deduction_amount: float, deduction_reason: str, needs_maintenance: bool = False, performed_by_user_id: int = None):
-    allocation = RoomAllocation.query.get(allocation_id)
+    allocation = db.session.get(RoomAllocation, allocation_id)
     if not allocation or not allocation.is_active:
         raise APIException("Active allocation not found.", status_code=404, code="NOT_FOUND")
 
@@ -140,3 +167,4 @@ def check_out_tenant(allocation_id: int, check_out_date_val: date, refund_amount
 
     log_audit("TENANT_CHECK_OUT", "room_allocations", allocation.id, {"refund": refund_amount, "deduction": deduction_amount}, user_id=performed_by_user_id)
     return allocation
+

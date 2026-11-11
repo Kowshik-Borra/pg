@@ -3,6 +3,7 @@ from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required
 from app.extensions import db
 from app.models.tenant import Tenant, RoomAllocation, VisitorLog
+from app.models.room_bed import Room, Bed
 from app.models.user import User, OwnerProfile, ManagerAssignment
 from app.models.property import PGProperty
 from app.middleware.error_handlers import APIException
@@ -85,16 +86,10 @@ def check_out(allocation_id):
 @jwt_required()
 @role_required("OWNER", "MANAGER", "SUPER_ADMIN")
 def list_property_tenants(property_id):
-    allocations = RoomAllocation.query.join(RoomAllocation.bed).join(RoomAllocation.bed.property.class_.rooms).filter(
-        RoomAllocation.bed.has(Bed.room.has(Room.property_id == property_id)),
-        RoomAllocation.is_active == True
-    ).all() if False else None  # Clean query below
-
-    # Direct query:
-    allocs = db.session.query(RoomAllocation).join(RoomAllocation.bed).filter(
+    allocs = db.session.query(RoomAllocation).join(Bed, RoomAllocation.bed_id == Bed.id).join(Room, Bed.room_id == Room.id).filter(
+        Room.property_id == property_id,
         RoomAllocation.is_active == True
     ).all()
-    filtered = [a for a in allocs if a.bed.room.property_id == property_id]
 
     return jsonify({
         "success": True,
@@ -103,7 +98,7 @@ def list_property_tenants(property_id):
                 "allocation": a.to_dict(),
                 "tenant": a.tenant.to_dict()
             }
-            for a in filtered
+            for a in allocs
         ]
     }), 200
 
@@ -173,3 +168,4 @@ def get_visitor_logs(property_id):
         "success": True,
         "data": [l.to_dict() for l in logs]
     }), 200
+

@@ -79,3 +79,4 @@ class ComplaintUpdate(db.Model):
             "updated_by": self.updated_by.full_name if self.updated_by else "System",
             "created_at": self.created_at.isoformat() if self.created_at else None
         }
+

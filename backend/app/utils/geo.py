@@ -12,3 +12,4 @@ def haversine_distance_km(lat1: float, lon1: float, lat2: float, lon2: float) ->
          math.sin(dlon / 2) ** 2)
     c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
     return round(r * c, 2)
+

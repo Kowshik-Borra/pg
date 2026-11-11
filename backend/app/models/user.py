@@ -67,8 +67,6 @@ class OwnerProfile(db.Model):
             "id": self.id,
             "user_id": self.user_id,
             "business_name": self.business_name,
-            "pan_number": self.pan_number,
-            "aadhaar_last4": self.aadhaar_last4,
             "is_approved": self.is_approved,
             "approved_at": self.approved_at.isoformat() if self.approved_at else None
         }
@@ -123,3 +121,4 @@ class Staff(db.Model):
             "is_active": self.is_active,
             "created_at": self.created_at.isoformat() if self.created_at else None
         }
+

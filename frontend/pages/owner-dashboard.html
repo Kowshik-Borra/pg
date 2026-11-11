@@ -3,119 +3,212 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Owner Business Portal | PG Connect</title>
+    <title>Owner Portal | PG Connect</title>
     <link rel="icon" type="image/x-icon" href="/favicon.ico">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
     <link rel="stylesheet" href="/css/main.css">
-    <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 </head>
-<body>
-    <div id="site-header"></div>
+<body class="bg-light">
+    <!-- Authenticated Owner Application Shell -->
+    <div class="app-shell">
+        <!-- Desktop Sidebar -->
+        <aside class="app-sidebar app-sidebar-desktop">
+            <div class="app-sidebar-header">
+                <a href="/pages/owner-dashboard.html" class="d-block text-decoration-none">
+                    <span class="navbar-brand-text">PG CONNECT</span>
+                </a>
+                <span class="app-sidebar-role">Owner Business Portal</span>
+            </div>
+            <nav class="app-sidebar-nav">
+                <a class="nav-link active" data-module="mod-overview" onclick="switchDashboardModule('mod-overview', 'Business Overview')">Overview</a>
+                <a class="nav-link" data-module="mod-properties" onclick="switchDashboardModule('mod-properties', 'My PG Properties')">My Properties</a>
+                <a class="nav-link" data-module="mod-map" onclick="showOwnerMapModule()">Properties Map</a>
+                <a class="nav-link" data-module="mod-rooms" onclick="switchDashboardModule('mod-rooms', 'Rooms and Beds')">Rooms & Beds</a>
+                <a class="nav-link" data-module="mod-bookings" onclick="switchDashboardModule('mod-bookings', 'Booking Requests')">Bookings</a>
+                <a class="nav-link" data-module="mod-residents" onclick="switchDashboardModule('mod-residents', 'Active Residents')">Active Residents</a>
+                <a class="nav-link" data-module="mod-invoices" onclick="switchDashboardModule('mod-invoices', 'Rent and Invoices')">Rent & Invoices</a>
+                <a class="nav-link" data-module="mod-expenses" onclick="switchDashboardModule('mod-expenses', 'Operating Expenses')">Expenses</a>
+                <a class="nav-link" data-module="mod-food" onclick="switchDashboardModule('mod-food', 'Weekly Food Menu')">Food Menu</a>
+                <a class="nav-link" data-module="mod-complaints" onclick="switchDashboardModule('mod-complaints', 'Complaints and Maintenance')">Complaints</a>
+                <div class="border-top my-2 pt-2">
+                    <a class="nav-link text-muted" onclick="downloadPropertyExcel()">Download Excel</a>
+                    <a class="nav-link text-muted" href="/pages/search.html" target="_blank">View Public Portal</a>
+                </div>
+            </nav>
+            <div class="app-sidebar-footer">
+                <div class="fw-semibold text-dark text-truncate" id="sidebar-user-name">Owner Account</div>
+                <div class="small text-muted mb-2 text-truncate" id="sidebar-user-email">owner@example.com</div>
+                <button class="btn btn-outline-secondary btn-sm w-100" onclick="Auth.logout()">Sign Out</button>
+            </div>
+        </aside>
 
-    <div class="container-fluid px-lg-5 py-4">
-        <!-- Top bar -->
-        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4 border-bottom pb-3">
-            <div>
-                <h1 class="h3 fw-bold mb-1">PG Owner Business Dashboard</h1>
-                <p class="text-muted small mb-0">Manage buildings, physical bed vacancies, bookings, rent invoices, and operational expenses.</p>
-            </div>
-            <div class="d-flex gap-2 align-items-center">
-                <label class="small text-muted fw-semibold">Active Property:</label>
-                <select class="form-select form-select-sm" id="owner-property-select" onchange="handlePropertyChange()" style="min-width: 240px;">
-                    <option value="">Loading properties...</option>
-                </select>
-                <button class="btn btn-primary btn-sm" onclick="openAddPropertyModal()">+ Add New PG</button>
-            </div>
-        </div>
-
-        <!-- Real Database Metrics Cards Row -->
-        <div class="row g-3 mb-4">
-            <div class="col-6 col-md-3">
-                <div class="stat-card">
-                    <div class="stat-label">Total Beds</div>
-                    <div class="stat-value" id="card-total-beds">0</div>
-                    <div class="small text-muted mt-1" id="card-rooms-count">0 Rooms</div>
+        <!-- Mobile Offcanvas Sidebar -->
+        <div class="offcanvas offcanvas-start" tabindex="-1" id="dashboardOffcanvas" aria-labelledby="dashboardOffcanvasLabel">
+            <div class="offcanvas-header border-bottom">
+                <div>
+                    <h5 class="offcanvas-title fw-bold" id="dashboardOffcanvasLabel">PG CONNECT</h5>
+                    <span class="app-sidebar-role">Owner Business Portal</span>
                 </div>
+                <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
             </div>
-            <div class="col-6 col-md-3">
-                <div class="stat-card">
-                    <div class="stat-label">Available Beds</div>
-                    <div class="stat-value text-success" id="card-available-beds">0</div>
-                    <div class="small text-muted mt-1" id="card-occupancy-rate">0% Occupancy</div>
-                </div>
-            </div>
-            <div class="col-6 col-md-3">
-                <div class="stat-card">
-                    <div class="stat-label">Rent Collected</div>
-                    <div class="stat-value text-primary" id="card-rent-collected">Rs. 0</div>
-                    <div class="small text-muted mt-1" id="card-pending-rent">Rs. 0 Pending</div>
-                </div>
-            </div>
-            <div class="col-6 col-md-3">
-                <div class="stat-card">
-                    <div class="stat-label">Pending Bookings</div>
-                    <div class="stat-value text-warning" id="card-pending-bookings">0</div>
-                    <div class="small text-muted mt-1">Requires Approval</div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Charts Row -->
-        <div class="row g-4 mb-4">
-            <div class="col-lg-8">
-                <div class="card p-3 h-100">
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h6 class="fw-bold mb-0">Financial Overview: Revenue vs Expenses</h6>
-                        <span class="small text-muted">All amounts in INR</span>
-                    </div>
-                    <div style="height: 250px;">
-                        <canvas id="revenueExpensesChart"></canvas>
-                    </div>
-                </div>
-            </div>
-            <div class="col-lg-4">
-                <div class="card p-3 h-100">
-                    <h6 class="fw-bold mb-3">Real-Time Bed Occupancy</h6>
-                    <div style="height: 250px;" class="d-flex justify-content-center align-items-center">
-                        <canvas id="occupancyDoughnutChart"></canvas>
-                    </div>
+            <div class="offcanvas-body p-0 d-flex flex-column">
+                <nav class="app-sidebar-nav">
+                    <a class="nav-link active" data-module="mod-overview" onclick="switchDashboardModule('mod-overview', 'Business Overview')">Overview</a>
+                    <a class="nav-link" data-module="mod-properties" onclick="switchDashboardModule('mod-properties', 'My PG Properties')">My Properties</a>
+                    <a class="nav-link" data-module="mod-map" onclick="showOwnerMapModule()">Properties Map</a>
+                    <a class="nav-link" data-module="mod-rooms" onclick="switchDashboardModule('mod-rooms', 'Rooms and Beds')">Rooms & Beds</a>
+                    <a class="nav-link" data-module="mod-bookings" onclick="switchDashboardModule('mod-bookings', 'Booking Requests')">Bookings</a>
+                    <a class="nav-link" data-module="mod-residents" onclick="switchDashboardModule('mod-residents', 'Active Residents')">Active Residents</a>
+                    <a class="nav-link" data-module="mod-invoices" onclick="switchDashboardModule('mod-invoices', 'Rent and Invoices')">Rent & Invoices</a>
+                    <a class="nav-link" data-module="mod-expenses" onclick="switchDashboardModule('mod-expenses', 'Operating Expenses')">Expenses</a>
+                    <a class="nav-link" data-module="mod-food" onclick="switchDashboardModule('mod-food', 'Weekly Food Menu')">Food Menu</a>
+                    <a class="nav-link" data-module="mod-complaints" onclick="switchDashboardModule('mod-complaints', 'Complaints and Maintenance')">Complaints</a>
+                </nav>
+                <div class="app-sidebar-footer mt-auto">
+                    <button class="btn btn-outline-secondary btn-sm w-100" onclick="Auth.logout()">Sign Out</button>
                 </div>
             </div>
         </div>
 
-        <!-- Main Workspace Tabs -->
-        <div class="card">
-            <div class="card-header border-bottom-0 pb-0">
-                <ul class="nav nav-tabs card-header-tabs" id="ownerTabs" role="tablist">
-                    <li class="nav-item">
-                        <button class="nav-link active" id="tab-bookings-btn" data-bs-toggle="tab" data-bs-target="#tab-bookings">Booking Requests</button>
-                    </li>
-                    <li class="nav-item">
-                        <button class="nav-link" id="tab-rooms-btn" data-bs-toggle="tab" data-bs-target="#tab-rooms">Rooms & Bed Inventory</button>
-                    </li>
-                    <li class="nav-item">
-                        <button class="nav-link" id="tab-tenants-btn" data-bs-toggle="tab" data-bs-target="#tab-tenants">Active Residents</button>
-                    </li>
-                    <li class="nav-item">
-                        <button class="nav-link" id="tab-invoices-btn" data-bs-toggle="tab" data-bs-target="#tab-invoices">Rent & Invoicing</button>
-                    </li>
-                    <li class="nav-item">
-                        <button class="nav-link" id="tab-expenses-btn" data-bs-toggle="tab" data-bs-target="#tab-expenses">Operating Expenses</button>
-                    </li>
-                    <li class="nav-item">
-                        <button class="nav-link" id="tab-food-btn" data-bs-toggle="tab" data-bs-target="#tab-food">Food Menu</button>
-                    </li>
-                    <li class="nav-item">
-                        <button class="nav-link" id="tab-complaints-btn" data-bs-toggle="tab" data-bs-target="#tab-complaints">Complaints</button>
-                    </li>
-                </ul>
-            </div>
+        <!-- Main Content Area -->
+        <div class="app-content-wrapper">
+            <!-- Topbar -->
+            <header class="app-topbar">
+                <div class="d-flex align-items-center gap-3">
+                    <button class="btn btn-outline-secondary btn-sm d-lg-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#dashboardOffcanvas">
+                        Menu
+                    </button>
+                    <span class="h5 fw-bold mb-0" id="topbar-page-title">Overview</span>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <label class="small text-muted fw-semibold d-none d-md-inline">Property:</label>
+                    <select class="form-select form-select-sm" id="owner-property-select" onchange="handlePropertyChange()" style="min-width: 200px;">
+                        <option value="">Loading properties...</option>
+                    </select>
+                    <button class="btn btn-primary btn-sm" onclick="openAddPropertyModal()">+ Add New PG</button>
+                    <button class="btn btn-outline-secondary btn-sm d-none d-md-inline" onclick="Auth.logout()">Sign Out</button>
+                </div>
+            </header>
 
-            <div class="card-body p-4">
-                <div class="tab-content" id="ownerTabContent">
-                    <!-- 1. Bookings Tab -->
-                    <div class="tab-pane fade show active" id="tab-bookings">
+            <!-- Main Scrollable Body -->
+            <main class="app-main">
+                <!-- 1. Module: Overview -->
+                <section class="app-module active" id="mod-overview">
+                    <div class="row g-3 mb-4">
+                        <div class="col-6 col-md-3">
+                            <div class="stat-card">
+                                <div class="stat-label">Total Beds</div>
+                                <div class="stat-value" id="card-total-beds">0</div>
+                                <div class="small text-muted mt-1" id="card-rooms-count">0 Rooms</div>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <div class="stat-card">
+                                <div class="stat-label">Available Beds</div>
+                                <div class="stat-value text-success" id="card-available-beds">0</div>
+                                <div class="small text-muted mt-1" id="card-occupancy-rate">0% Occupancy</div>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <div class="stat-card">
+                                <div class="stat-label">Rent Collected</div>
+                                <div class="stat-value text-primary" id="card-rent-collected">Rs. 0</div>
+                                <div class="small text-muted mt-1" id="card-pending-rent">Rs. 0 Pending</div>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <div class="stat-card">
+                                <div class="stat-label">Pending Bookings</div>
+                                <div class="stat-value text-warning" id="card-pending-bookings">0</div>
+                                <div class="small text-muted mt-1">Requires Approval</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Charts Row -->
+                    <div class="row g-4 mb-4">
+                        <div class="col-lg-8">
+                            <div class="card p-3 h-100">
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <h6 class="fw-bold mb-0">Financial Overview: Revenue vs Expenses</h6>
+                                    <span class="small text-muted">All amounts in INR</span>
+                                </div>
+                                <div style="height: 250px;">
+                                    <canvas id="revenueExpensesChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-4">
+                            <div class="card p-3 h-100">
+                                <h6 class="fw-bold mb-3">Real-Time Bed Occupancy</h6>
+                                <div style="height: 250px;" class="d-flex justify-content-center align-items-center">
+                                    <canvas id="occupancyDoughnutChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 2. Module: My Properties -->
+                <section class="app-module" id="mod-properties">
+                    <div class="card p-3">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h6 class="fw-bold mb-0">Registered PG Properties</h6>
+                            <button class="btn btn-primary btn-sm" onclick="openAddPropertyModal()">+ Add New Property</button>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle">
+                                <thead>
+                                    <tr>
+                                        <th>Property Name</th>
+                                        <th>Location</th>
+                                        <th>Type</th>
+                                        <th>Contact Phone</th>
+                                        <th>Status</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="properties-list-tbody">
+                                    <tr><td colspan="6" class="text-center py-4 text-muted">Loading properties...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 3. Module: Properties Map -->
+                <section class="app-module" id="mod-map">
+                    <div class="card p-3">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div>
+                                <h6 class="fw-bold mb-1">Owner Properties Geographic Map</h6>
+                                <p class="text-muted small mb-0">Displays all verified and pending PG properties owned by your account.</p>
+                            </div>
+                            <button class="btn btn-outline-secondary btn-sm" onclick="loadOwnerPropertyMap()">Refresh Map</button>
+                        </div>
+                        <div id="owner-properties-map"></div>
+                    </div>
+                </section>
+
+                <!-- 4. Module: Rooms & Beds -->
+                <section class="app-module" id="mod-rooms">
+                    <div class="card p-3">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h6 class="fw-bold mb-0">Rooms and Physical Bed Inventory</h6>
+                            <button class="btn btn-outline-primary btn-sm" onclick="openAddRoomModal()">+ Add Room</button>
+                        </div>
+                        <div id="owner-rooms-container">
+                            <!-- Populated with rooms and bed statuses -->
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 5. Module: Bookings -->
+                <section class="app-module" id="mod-bookings">
+                    <div class="card p-3">
                         <div class="d-flex justify-content-between align-items-center mb-3">
                             <h6 class="fw-bold mb-0">Booking Requests for Selected Property</h6>
                         </div>
@@ -138,20 +231,11 @@
                             </table>
                         </div>
                     </div>
+                </section>
 
-                    <!-- 2. Rooms and Beds Tab -->
-                    <div class="tab-pane fade" id="tab-rooms">
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h6 class="fw-bold mb-0">Rooms and Physical Beds</h6>
-                            <button class="btn btn-outline-primary btn-sm" onclick="openAddRoomModal()">+ Add Room</button>
-                        </div>
-                        <div id="owner-rooms-container">
-                            <!-- Populated with rooms and bed statuses -->
-                        </div>
-                    </div>
-
-                    <!-- 3. Active Residents Tab -->
-                    <div class="tab-pane fade" id="tab-tenants">
+                <!-- 6. Module: Active Residents -->
+                <section class="app-module" id="mod-residents">
+                    <div class="card p-3">
                         <div class="d-flex justify-content-between align-items-center mb-3">
                             <h6 class="fw-bold mb-0">Active Resident Tenants</h6>
                         </div>
@@ -173,26 +257,25 @@
                             </table>
                         </div>
                     </div>
+                </section>
 
-                    <!-- 4. Rent & Invoices Tab -->
-                    <div class="tab-pane fade" id="tab-invoices">
+                <!-- 7. Module: Rent & Invoices -->
+                <section class="app-module" id="mod-invoices">
+                    <div class="card p-3">
                         <div class="d-flex justify-content-between align-items-center mb-3">
                             <h6 class="fw-bold mb-0">Monthly Rent Invoices & Collections</h6>
-                            <div class="d-flex gap-2">
-                                <button class="btn btn-outline-secondary btn-sm" onclick="downloadPropertyExcel()">Download Excel Report</button>
-                            </div>
                         </div>
                         <div class="table-responsive">
                             <table class="table table-hover align-middle">
                                 <thead>
                                     <tr>
                                         <th>Invoice #</th>
-                                        <th>Tenant</th>
-                                        <th>Period</th>
-                                        <th>Billed (INR)</th>
-                                        <th>Paid (INR)</th>
+                                        <th>Resident</th>
+                                        <th>Month</th>
+                                        <th>Amount Due</th>
+                                        <th>Paid</th>
                                         <th>Status</th>
-                                        <th>Actions</th>
+                                        <th>Action</th>
                                     </tr>
                                 </thead>
                                 <tbody id="invoices-tbody">
@@ -201,11 +284,13 @@
                             </table>
                         </div>
                     </div>
+                </section>
 
-                    <!-- 5. Expenses Tab -->
-                    <div class="tab-pane fade" id="tab-expenses">
+                <!-- 8. Module: Expenses -->
+                <section class="app-module" id="mod-expenses">
+                    <div class="card p-3">
                         <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h6 class="fw-bold mb-0">Operating Expense Ledger</h6>
+                            <h6 class="fw-bold mb-0">Operating Expenses Log</h6>
                             <button class="btn btn-outline-primary btn-sm" onclick="openAddExpenseModal()">+ Record Expense</button>
                         </div>
                         <div class="table-responsive">
@@ -215,7 +300,7 @@
                                         <th>Date</th>
                                         <th>Category</th>
                                         <th>Description</th>
-                                        <th>Amount (INR)</th>
+                                        <th>Amount</th>
                                         <th>Recorded By</th>
                                     </tr>
                                 </thead>
@@ -225,9 +310,11 @@
                             </table>
                         </div>
                     </div>
+                </section>
 
-                    <!-- 6. Food Menu Tab -->
-                    <div class="tab-pane fade" id="tab-food">
+                <!-- 9. Module: Food Menu -->
+                <section class="app-module" id="mod-food">
+                    <div class="card p-3">
                         <div class="d-flex justify-content-between align-items-center mb-3">
                             <h6 class="fw-bold mb-0">Weekly Meal Configuration</h6>
                             <button class="btn btn-outline-primary btn-sm" onclick="openUpdateFoodModal()">Update Meal Item</button>
@@ -248,9 +335,11 @@
                             </table>
                         </div>
                     </div>
+                </section>
 
-                    <!-- 7. Complaints Tab -->
-                    <div class="tab-pane fade" id="tab-complaints">
+                <!-- 10. Module: Complaints -->
+                <section class="app-module" id="mod-complaints">
+                    <div class="card p-3">
                         <div class="d-flex justify-content-between align-items-center mb-3">
                             <h6 class="fw-bold mb-0">Maintenance & Complaints Ticketing</h6>
                         </div>
@@ -273,12 +362,12 @@
                             </table>
                         </div>
                     </div>
-                </div>
-            </div>
+                </section>
+            </main>
         </div>
     </div>
 
-    <!-- Add Property Modal -->
+    <!-- Add Property Modal with Leaflet Map Picker -->
     <div class="modal fade" id="addPropertyModal" tabindex="-1">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
@@ -329,15 +418,25 @@
                             </div>
                         </div>
 
-                        <div class="row g-3 mb-3">
-                            <div class="col-md-6">
-                                <label class="form-label small fw-semibold">Latitude</label>
-                                <input type="number" step="0.000001" class="form-control" id="prop-in-lat" value="12.9352">
+                        <!-- Interactive Leaflet Location Picker -->
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold">Property Location on Map * (Click or drag marker)</label>
+                            <div id="property-map-picker" class="mb-2"></div>
+                            <div class="row g-2">
+                                <div class="col-md-6">
+                                    <div class="input-group input-group-sm">
+                                        <span class="input-group-text">Lat</span>
+                                        <input type="number" step="0.000001" class="form-control" id="prop-in-lat" required readonly placeholder="Click map to pick">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="input-group input-group-sm">
+                                        <span class="input-group-text">Lng</span>
+                                        <input type="number" step="0.000001" class="form-control" id="prop-in-lng" required readonly placeholder="Click map to pick">
+                                    </div>
+                                </div>
                             </div>
-                            <div class="col-md-6">
-                                <label class="form-label small fw-semibold">Longitude</label>
-                                <input type="number" step="0.000001" class="form-control" id="prop-in-lng" value="77.6245">
-                            </div>
+                            <small class="text-muted d-block mt-1">Coordinates must be selected on the map. Default or empty coordinates are rejected.</small>
                         </div>
 
                         <div class="mb-3">
@@ -496,7 +595,53 @@
         </div>
     </div>
 
-    <div id="site-footer"></div>
+    <!-- Update Food Modal -->
+    <div class="modal fade" id="updateFoodModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold">Configure Meal Items</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="update-food-form" onsubmit="submitUpdateFood(event)">
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label small fw-semibold">Day of Week *</label>
+                                <select class="form-select" id="food-in-day" required>
+                                    <option value="MONDAY">Monday</option>
+                                    <option value="TUESDAY">Tuesday</option>
+                                    <option value="WEDNESDAY">Wednesday</option>
+                                    <option value="THURSDAY">Thursday</option>
+                                    <option value="FRIDAY">Friday</option>
+                                    <option value="SATURDAY">Saturday</option>
+                                    <option value="SUNDAY">Sunday</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small fw-semibold">Meal Type *</label>
+                                <select class="form-select" id="food-in-meal" required>
+                                    <option value="BREAKFAST">Breakfast</option>
+                                    <option value="LUNCH">Lunch</option>
+                                    <option value="DINNER">Dinner</option>
+                                    <option value="EVENING_SNACKS">Evening Snacks</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold">Menu Description *</label>
+                            <input type="text" class="form-control" id="food-in-items" required placeholder="e.g. Masala Dosa, Sambar, Coconut Chutney">
+                        </div>
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" id="food-in-veg" checked>
+                            <label class="form-check-label small" for="food-in-veg">Pure Vegetarian Meal</label>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">Update Meal Menu</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="/js/config.js"></script>
@@ -508,9 +653,20 @@
         let currentPropId = null;
         let revChart = null;
         let occChart = null;
+        let pickerMap = null;
+        let pickerMarker = null;
+        let ownerPropertiesMap = null;
+        let ownerMapMarkers = [];
 
         document.addEventListener("DOMContentLoaded", async () => {
             if (!Auth.requireAuth(["OWNER", "SUPER_ADMIN"])) return;
+            const user = API.getUser();
+            if (user) {
+                const nameEl = document.getElementById("sidebar-user-name");
+                const emailEl = document.getElementById("sidebar-user-email");
+                if (nameEl) nameEl.innerText = user.full_name;
+                if (emailEl) emailEl.innerText = user.email;
+            }
             await loadOwnerProperties();
         });
 
@@ -520,16 +676,39 @@
                 if (res.success && res.data) {
                     myProperties = res.data;
                     const select = document.getElementById("owner-property-select");
+                    const listTbody = document.getElementById("properties-list-tbody");
+
                     if (myProperties.length === 0) {
                         select.innerHTML = `<option value="">No properties registered yet</option>`;
+                        if (listTbody) {
+                            listTbody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-muted">No properties registered. Click "+ Add New Property" to get started.</td></tr>`;
+                        }
                         return;
                     }
 
                     select.innerHTML = myProperties.map(p => `
-                        <option value="${p.id}">${p.name} (${p.city})</option>
+                        <option value="${p.id}" ${p.id === currentPropId ? 'selected' : ''}>${p.name} (${p.city})</option>
                     `).join("");
 
-                    currentPropId = myProperties[0].id;
+                    if (listTbody) {
+                        listTbody.innerHTML = myProperties.map(p => `
+                            <tr>
+                                <td class="fw-semibold">${p.name}</td>
+                                <td>${p.locality}, ${p.city}</td>
+                                <td><span class="badge bg-light text-dark border">${p.property_type}</span></td>
+                                <td>${p.contact_phone || '--'}</td>
+                                <td><span class="badge ${p.is_verified ? 'badge-available' : 'badge-reserved'}">${p.is_verified ? 'VERIFIED' : 'PENDING APPROVAL'}</span></td>
+                                <td>
+                                    <button class="btn btn-outline-primary btn-sm py-0 px-2" onclick="selectProperty(${p.id})">Manage</button>
+                                </td>
+                            </tr>
+                        `).join("");
+                    }
+
+                    if (!currentPropId || !myProperties.find(p => p.id === currentPropId)) {
+                        currentPropId = myProperties[0].id;
+                    }
+
                     await refreshDashboard();
                 }
             } catch(e) {
@@ -537,9 +716,20 @@
             }
         }
 
+        function selectProperty(propId) {
+            currentPropId = propId;
+            const select = document.getElementById("owner-property-select");
+            if (select) select.value = propId;
+            refreshDashboard();
+            switchDashboardModule("mod-overview", "Business Overview");
+        }
+
         async function handlePropertyChange() {
-            currentPropId = parseInt(document.getElementById("owner-property-select").value);
-            await refreshDashboard();
+            const val = document.getElementById("owner-property-select").value;
+            if (val) {
+                currentPropId = parseInt(val);
+                await refreshDashboard();
+            }
         }
 
         async function refreshDashboard() {
@@ -571,43 +761,45 @@
         }
 
         function renderCharts(d) {
-            // Revenue vs Expenses Bar Chart
             const ctxRev = document.getElementById("revenueExpensesChart");
-            if (revChart) revChart.destroy();
-            revChart = new Chart(ctxRev, {
-                type: "bar",
-                data: {
-                    labels: ["Total Billed", "Total Collected", "Total Expenses", "Net Operating Income"],
-                    datasets: [{
-                        label: "INR",
-                        data: [d.total_billed, d.total_collected, d.total_expenses, d.net_operating_income],
-                        backgroundColor: ["#94A3B8", "#2563EB", "#B91C1C", "#15803D"]
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { display: false } }
-                }
-            });
+            if (ctxRev) {
+                if (revChart) revChart.destroy();
+                revChart = new Chart(ctxRev, {
+                    type: "bar",
+                    data: {
+                        labels: ["Total Billed", "Total Collected", "Total Expenses", "Net Operating Income"],
+                        datasets: [{
+                            label: "INR",
+                            data: [d.total_billed, d.total_collected, d.total_expenses, d.net_operating_income],
+                            backgroundColor: ["#94A3B8", "#2563EB", "#B91C1C", "#15803D"]
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } }
+                    }
+                });
+            }
 
-            // Bed Occupancy Doughnut Chart
             const ctxOcc = document.getElementById("occupancyDoughnutChart");
-            if (occChart) occChart.destroy();
-            occChart = new Chart(ctxOcc, {
-                type: "doughnut",
-                data: {
-                    labels: ["Occupied Beds", "Available Beds"],
-                    datasets: [{
-                        data: [d.occupied_beds, d.available_beds],
-                        backgroundColor: ["#B91C1C", "#15803D"]
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false
-                }
-            });
+            if (ctxOcc) {
+                if (occChart) occChart.destroy();
+                occChart = new Chart(ctxOcc, {
+                    type: "doughnut",
+                    data: {
+                        labels: ["Occupied Beds", "Available Beds"],
+                        datasets: [{
+                            data: [d.occupied_beds, d.available_beds],
+                            backgroundColor: ["#B91C1C", "#15803D"]
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false
+                    }
+                });
+            }
         }
 
         async function loadBookings() {
@@ -911,6 +1103,35 @@
             } catch(e) {}
         }
 
+        function openUpdateFoodModal() {
+            new bootstrap.Modal(document.getElementById("updateFoodModal")).show();
+        }
+
+        async function submitUpdateFood(e) {
+            e.preventDefault();
+            const day = document.getElementById("food-in-day").value;
+            const meal = document.getElementById("food-in-meal").value;
+            const items = document.getElementById("food-in-items").value.trim();
+            const isVeg = document.getElementById("food-in-veg").checked;
+
+            try {
+                const res = await API.post(`/food/property/${currentPropId}/meal`, {
+                    day_of_week: day,
+                    meal_type: meal,
+                    items_menu: items,
+                    is_veg: isVeg
+                });
+                if (res.success) {
+                    bootstrap.Modal.getInstance(document.getElementById("updateFoodModal")).hide();
+                    document.getElementById("update-food-form").reset();
+                    alert("Meal items updated successfully.");
+                    loadFoodMenu();
+                }
+            } catch(err) {
+                alert(err.message || "Failed to update food menu.");
+            }
+        }
+
         async function loadComplaints() {
             try {
                 const res = await API.get(`/complaints/property/${currentPropId}`);
@@ -952,12 +1173,72 @@
             }
         }
 
+        // ==================== Property Registration & Map Picker ====================
         function openAddPropertyModal() {
-            new bootstrap.Modal(document.getElementById("addPropertyModal")).show();
+            const modalEl = document.getElementById("addPropertyModal");
+            const modal = new bootstrap.Modal(modalEl);
+            modal.show();
+
+            // Initialize or invalidate picker map once modal transition completes
+            modalEl.addEventListener("shown.bs.modal", () => {
+                initPropertyMapPicker();
+            }, { once: true });
+        }
+
+        function initPropertyMapPicker() {
+            const mapContainer = document.getElementById("property-map-picker");
+            if (!mapContainer) return;
+
+            const defaultLat = 12.9716;
+            const defaultLng = 77.5946;
+
+            if (!pickerMap) {
+                pickerMap = L.map("property-map-picker").setView([defaultLat, defaultLng], 12);
+                L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+                    attribution: "&copy; OpenStreetMap contributors",
+                    maxZoom: 18
+                }).addTo(pickerMap);
+
+                pickerMarker = L.marker([defaultLat, defaultLng], { draggable: true }).addTo(pickerMap);
+                pickerMarker.bindPopup("Click map or drag to set exact property location").openPopup();
+
+                pickerMarker.on("dragend", (e) => {
+                    const pos = e.target.getLatLng();
+                    updatePickerInputs(pos.lat, pos.lng);
+                });
+
+                pickerMap.on("click", (e) => {
+                    pickerMarker.setLatLng(e.latlng);
+                    updatePickerInputs(e.latlng.lat, e.latlng.lng);
+                });
+            }
+
+            pickerMap.invalidateSize();
+        }
+
+        function updatePickerInputs(lat, lng) {
+            document.getElementById("prop-in-lat").value = Number(lat).toFixed(6);
+            document.getElementById("prop-in-lng").value = Number(lng).toFixed(6);
         }
 
         async function submitAddProperty(e) {
             e.preventDefault();
+            const latVal = document.getElementById("prop-in-lat").value.trim();
+            const lngVal = document.getElementById("prop-in-lng").value.trim();
+
+            if (!latVal || !lngVal) {
+                alert("Please click or drag the marker on the map to set the property's exact coordinates.");
+                return;
+            }
+
+            const lat = parseFloat(latVal);
+            const lng = parseFloat(lngVal);
+
+            if (isNaN(lat) || isNaN(lng) || (lat === 0 && lng === 0)) {
+                alert("Please select a valid geographic location on the map.");
+                return;
+            }
+
             const payload = {
                 name: document.getElementById("prop-in-name").value.trim(),
                 property_type: document.getElementById("prop-in-type").value,
@@ -966,8 +1247,8 @@
                 city: document.getElementById("prop-in-city").value.trim(),
                 state: document.getElementById("prop-in-state").value.trim(),
                 pincode: document.getElementById("prop-in-pin").value.trim(),
-                latitude: parseFloat(document.getElementById("prop-in-lat").value),
-                longitude: parseFloat(document.getElementById("prop-in-lng").value),
+                latitude: lat,
+                longitude: lng,
                 description: document.getElementById("prop-in-desc").value.trim()
             };
 
@@ -975,11 +1256,65 @@
                 const res = await API.post("/properties", payload);
                 if (res.success) {
                     bootstrap.Modal.getInstance(document.getElementById("addPropertyModal")).hide();
-                    alert("Property registered successfully.");
+                    document.getElementById("add-property-form").reset();
+                    alert("Property registered successfully and submitted for admin review.");
                     await loadOwnerProperties();
                 }
             } catch(err) {
                 alert(err.message || "Failed to create property.");
+            }
+        }
+
+        // ==================== Owner Properties Map Module ====================
+        function showOwnerMapModule() {
+            switchDashboardModule("mod-map", "Properties Map");
+            setTimeout(loadOwnerPropertyMap, 150);
+        }
+
+        async function loadOwnerPropertyMap() {
+            const mapContainer = document.getElementById("owner-properties-map");
+            if (!mapContainer) return;
+
+            try {
+                const res = await API.get("/maps/owner-properties");
+                const markers = (res.success && res.data) ? res.data : [];
+
+                if (!ownerPropertiesMap) {
+                    ownerPropertiesMap = L.map("owner-properties-map").setView([12.9716, 77.5946], 11);
+                    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+                        attribution: "&copy; OpenStreetMap contributors",
+                        maxZoom: 18
+                    }).addTo(ownerPropertiesMap);
+                }
+
+                // Clear existing markers
+                ownerMapMarkers.forEach(m => ownerPropertiesMap.removeLayer(m));
+                ownerMapMarkers = [];
+
+                if (markers.length > 0) {
+                    const bounds = [];
+                    markers.forEach(p => {
+                        const marker = L.marker([p.latitude, p.longitude]).addTo(ownerPropertiesMap);
+                        marker.bindPopup(`
+                            <div style="min-width: 180px;">
+                                <strong class="d-block mb-1">${p.name}</strong>
+                                <span class="badge ${p.is_verified ? 'badge-available' : 'badge-reserved'} mb-1">${p.is_verified ? 'VERIFIED' : 'PENDING APPROVAL'}</span>
+                                <div class="small text-muted">${p.address_line1 || p.locality}, ${p.city}</div>
+                                <div class="small text-primary mt-1">Available Beds: ${p.available_beds} / ${p.total_beds}</div>
+                                <div class="mt-2">
+                                    <button class="btn btn-outline-primary btn-sm py-0 px-2" onclick="selectProperty(${p.id})">Manage PG</button>
+                                </div>
+                            </div>
+                        `);
+                        ownerMapMarkers.push(marker);
+                        bounds.push([p.latitude, p.longitude]);
+                    });
+                    ownerPropertiesMap.fitBounds(bounds, { padding: [40, 40], maxZoom: 14 });
+                }
+
+                ownerPropertiesMap.invalidateSize();
+            } catch (err) {
+                console.error("Failed to load owner property map:", err);
             }
         }
 

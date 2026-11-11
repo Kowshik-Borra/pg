@@ -37,7 +37,7 @@ def search_properties():
     sharing = request.args.get("sharing", "").strip().upper()
     has_ac = request.args.get("has_ac", type=lambda v: v.lower() == "true")
     has_wifi = request.args.get("has_wifi", type=lambda v: v.lower() == "true")
-    has_food = request.args.get("has_food", type=lambda v: v.lower() == "true")
+    raw_has_food = request.args.get("has_food")
     verified_only = request.args.get("verified_only", type=lambda v: v.lower() == "true")
     page = max(1, request.args.get("page", 1, type=int))
     per_page = min(50, max(1, request.args.get("per_page", 12, type=int)))
@@ -62,6 +62,13 @@ def search_properties():
             query = query.filter(PropertyFacility.has_ac == True)
         if has_wifi is True:
             query = query.filter(PropertyFacility.has_wifi == True)
+
+    # Food availability filter
+    if raw_has_food is not None:
+        if raw_has_food.lower() in ["true", "1", "yes"]:
+            query = query.filter(PGProperty.food_menus.any())
+        elif raw_has_food.lower() in ["false", "0", "no"]:
+            query = query.filter(~PGProperty.food_menus.any())
 
     # Filter by rent range or sharing type via Room subquery
     if min_rent or max_rent or sharing:
@@ -94,7 +101,7 @@ def search_properties():
 
 @property_bp.route("/<int:property_id>", methods=["GET"])
 def get_property_by_id(property_id):
-    prop = PGProperty.query.get(property_id)
+    prop = db.session.get(PGProperty, property_id)
     if not prop or not prop.is_active:
         raise APIException("Property not found or inactive.", status_code=404, code="NOT_FOUND")
     return jsonify({
@@ -170,7 +177,15 @@ def create_property():
     if prop_type not in ["BOYS", "GIRLS", "CO_ED"]:
         raise APIException("Property type must be BOYS, GIRLS, or CO_ED.", status_code=400, code="VALIDATION_ERROR")
 
-    lat, lng = validate_coordinates(data.get("latitude", 12.9716), data.get("longitude", 77.5946))
+    lat_val = data.get("latitude")
+    lng_val = data.get("longitude")
+    if lat_val is None or lng_val is None or str(lat_val).strip() == "" or str(lng_val).strip() == "":
+        raise APIException("Property location coordinates (latitude and longitude) are required. Please select the property location on the map.", status_code=400, code="VALIDATION_ERROR")
+
+    lat, lng = validate_coordinates(lat_val, lng_val)
+    if lat == 0.0 and lng == 0.0:
+        raise APIException("Invalid coordinates: (0, 0) placeholder is not allowed. Please select the actual property location on the map.", status_code=400, code="VALIDATION_ERROR")
+
     slug = generate_slug(name, city)
 
     prop = PGProperty(
@@ -237,7 +252,7 @@ def create_property():
 @role_required("OWNER", "SUPER_ADMIN")
 def update_property(property_id):
     current_user = get_current_user()
-    prop = PGProperty.query.get(property_id)
+    prop = db.session.get(PGProperty, property_id)
     if not prop:
         raise APIException("Property not found.", status_code=404, code="NOT_FOUND")
 
@@ -290,7 +305,7 @@ def update_property(property_id):
 @role_required("OWNER", "SUPER_ADMIN")
 def upload_property_photo(property_id):
     current_user = get_current_user()
-    prop = PGProperty.query.get(property_id)
+    prop = db.session.get(PGProperty, property_id)
     if not prop:
         raise APIException("Property not found.", status_code=404, code="NOT_FOUND")
 
@@ -342,3 +357,4 @@ def get_my_properties():
         "success": True,
         "data": [p.to_dict(include_details=True) for p in properties]
     }), 200
+

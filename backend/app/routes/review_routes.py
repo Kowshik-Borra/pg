@@ -40,7 +40,7 @@ def submit_review():
         if not (1 <= r <= 5):
             raise APIException("All ratings must be between 1 and 5.", status_code=400, code="VALIDATION_ERROR")
 
-    allocation = RoomAllocation.query.get(allocation_id)
+    allocation = db.session.get(RoomAllocation, allocation_id)
     if not allocation or allocation.tenant_id != tenant.id:
         raise APIException("You can only review a property where you have a verified stay record.", status_code=403, code="FORBIDDEN")
 
@@ -94,7 +94,7 @@ def get_wishlist():
 @role_required("TENANT")
 def add_to_wishlist(property_id):
     current_user = get_current_user()
-    prop = PGProperty.query.get(property_id)
+    prop = db.session.get(PGProperty, property_id)
     if not prop or not prop.is_active:
         raise APIException("Property not found or inactive.", status_code=404, code="NOT_FOUND")
 
@@ -130,3 +130,4 @@ def remove_from_wishlist(property_id):
         "success": True,
         "message": "Property removed from wishlist."
     }), 200
+

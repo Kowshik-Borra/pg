@@ -47,3 +47,4 @@ def validate_positive_amount(amount, field_name="Amount"):
     if val < 0:
         raise APIException(f"{field_name} cannot be negative.", status_code=400, code="VALIDATION_ERROR")
     return val
+

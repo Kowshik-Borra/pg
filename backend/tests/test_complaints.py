@@ -40,3 +40,4 @@ def test_complaints_flow(client, seeded_users):
 
     assert res_update.status_code == 200
     assert res_update.get_json()["data"]["status"] == "IN_PROGRESS"
+

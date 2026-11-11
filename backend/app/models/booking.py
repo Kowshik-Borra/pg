@@ -74,3 +74,4 @@ class BookingHistory(db.Model):
             "change_reason": self.change_reason,
             "recorded_at": self.recorded_at.isoformat() if self.recorded_at else None
         }
+

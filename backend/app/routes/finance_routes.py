@@ -7,7 +7,7 @@ from app.models.tenant import Tenant, RoomAllocation
 from app.models.property import PGProperty
 from app.models.user import OwnerProfile, ManagerAssignment
 from app.middleware.error_handlers import APIException
-from app.middleware.rbac import role_required, get_current_user
+from app.middleware.rbac import role_required, get_current_user, verify_property_access
 from app.schemas.validators import validate_positive_amount
 from app.services.finance_service import (
     generate_invoice_for_allocation,
@@ -22,6 +22,7 @@ finance_bp = Blueprint("finance", __name__, url_prefix="/api/finance")
 @jwt_required()
 @role_required("OWNER", "MANAGER", "SUPER_ADMIN")
 def create_invoice():
+    current_user = get_current_user()
     data = request.get_json() or {}
     alloc_id = data.get("allocation_id")
     month = data.get("billing_month")
@@ -29,6 +30,11 @@ def create_invoice():
 
     if not alloc_id or not month or not year:
         raise APIException("Allocation ID, billing month, and billing year are required.", status_code=400, code="VALIDATION_ERROR")
+
+    alloc = db.session.get(RoomAllocation, alloc_id)
+    if not alloc:
+        raise APIException("Allocation not found.", status_code=404, code="NOT_FOUND")
+    verify_property_access(alloc.bed.room.property_id, current_user)
 
     electricity = validate_positive_amount(data.get("electricity_charges", 0.0), "Electricity charges")
     food = validate_positive_amount(data.get("food_charges", 0.0), "Food charges")
@@ -65,6 +71,12 @@ def make_payment():
     if not invoice_id:
         raise APIException("Invoice ID is required.", status_code=400, code="VALIDATION_ERROR")
 
+    invoice = db.session.get(RentInvoice, invoice_id)
+    if not invoice:
+        raise APIException("Invoice not found.", status_code=404, code="NOT_FOUND")
+
+    verify_property_access(invoice.property_id, current_user, required_manager_perm="can_manage_payments")
+
     if method not in ["CASH", "UPI", "BANK_TRANSFER", "CHEQUE"]:
         raise APIException("Payment method must be CASH, UPI, BANK_TRANSFER, or CHEQUE.", status_code=400, code="VALIDATION_ERROR")
 
@@ -87,6 +99,8 @@ def make_payment():
 @jwt_required()
 @role_required("OWNER", "MANAGER", "SUPER_ADMIN")
 def list_property_invoices(property_id):
+    current_user = get_current_user()
+    verify_property_access(property_id, current_user)
     invoices = RentInvoice.query.filter_by(property_id=property_id).order_by(RentInvoice.created_at.desc()).all()
     return jsonify({
         "success": True,
@@ -124,6 +138,8 @@ def record_expense():
     if not property_id or not desc:
         raise APIException("Property ID and description are required.", status_code=400, code="VALIDATION_ERROR")
 
+    verify_property_access(property_id, current_user)
+
     if category not in ["ELECTRICITY", "WATER", "MAINTENANCE", "INTERNET", "GROCERY_FOOD", "SALARY", "TAX", "MISCELLANEOUS"]:
         raise APIException("Invalid expense category.", status_code=400, code="VALIDATION_ERROR")
 
@@ -155,6 +171,8 @@ def record_expense():
 @jwt_required()
 @role_required("OWNER", "SUPER_ADMIN")
 def list_property_expenses(property_id):
+    current_user = get_current_user()
+    verify_property_access(property_id, current_user)
     expenses = Expense.query.filter_by(property_id=property_id).order_by(Expense.expense_date.desc()).all()
     return jsonify({
         "success": True,
@@ -165,8 +183,11 @@ def list_property_expenses(property_id):
 @jwt_required()
 @role_required("OWNER", "MANAGER", "SUPER_ADMIN")
 def get_financial_summary(property_id):
+    current_user = get_current_user()
+    verify_property_access(property_id, current_user)
     summary = get_property_financial_summary(property_id)
     return jsonify({
         "success": True,
         "data": summary
     }), 200
+

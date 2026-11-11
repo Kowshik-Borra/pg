@@ -5,14 +5,14 @@ from app.extensions import db
 from app.models.food import FoodMenu
 from app.models.property import PGProperty
 from app.middleware.error_handlers import APIException
-from app.middleware.rbac import role_required, get_current_user
+from app.middleware.rbac import role_required, get_current_user, verify_property_access
 from app.services.audit_service import log_audit
 
 food_bp = Blueprint("food", __name__, url_prefix="/api/food")
 
 @food_bp.route("/property/<int:property_id>", methods=["GET"])
 def get_property_menu(property_id):
-    prop = PGProperty.query.get(property_id)
+    prop = db.session.get(PGProperty, property_id)
     if not prop or not prop.is_active:
         raise APIException("Property not found or inactive.", status_code=404, code="NOT_FOUND")
 
@@ -41,6 +41,7 @@ def get_property_menu(property_id):
 @role_required("OWNER", "MANAGER", "SUPER_ADMIN")
 def update_or_create_meal(property_id):
     current_user = get_current_user()
+    verify_property_access(property_id, current_user)
     data = request.get_json() or {}
 
     day = (data.get("day_of_week") or "").strip().upper()
@@ -84,3 +85,4 @@ def update_or_create_meal(property_id):
         "message": f"{day} {meal} menu updated successfully.",
         "data": menu_item.to_dict()
     }), 200
+

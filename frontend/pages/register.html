@@ -58,7 +58,7 @@
 
                         <!-- Tenant Specific Fields -->
                         <div id="tenant-fields">
-                            <h6 class="fw-bold border-bottom pb-2 mb-3 mt-4">Verification & Emergency Contact</h6>
+                            <h6 class="fw-bold border-bottom pb-2 mb-3 mt-4">Emergency Contact & Profile</h6>
                             <div class="row g-3 mb-3">
                                 <div class="col-md-4">
                                     <label class="form-label small fw-semibold">Emergency Contact</label>
@@ -73,20 +73,9 @@
                                     <input type="text" class="form-control" id="reg-emg-rel" placeholder="e.g. Parent">
                                 </div>
                             </div>
-
-                            <div class="row g-3 mb-3">
-                                <div class="col-md-6">
-                                    <label class="form-label small fw-semibold">ID Proof Type</label>
-                                    <select class="form-select" id="reg-id-type">
-                                        <option value="Aadhaar Card">Aadhaar Card</option>
-                                        <option value="Passport">Passport</option>
-                                        <option value="Driving License">Driving License</option>
-                                    </select>
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label small fw-semibold">ID Number (Masked)</label>
-                                    <input type="text" class="form-control" id="reg-id-num" placeholder="XXXX-XXXX-1234">
-                                </div>
+                            <div class="mb-3">
+                                <label class="form-label small fw-semibold">College or Company Name (Optional)</label>
+                                <input type="text" class="form-control" id="reg-tenant-org" placeholder="e.g. Infosys / ABC College">
                             </div>
                         </div>
 
@@ -96,17 +85,6 @@
                             <div class="mb-3">
                                 <label class="form-label small fw-semibold">Business / PG Enterprise Name *</label>
                                 <input type="text" class="form-control" id="reg-business-name" placeholder="e.g. Sharma Hospitality Stays">
-                            </div>
-
-                            <div class="row g-3 mb-3">
-                                <div class="col-md-6">
-                                    <label class="form-label small fw-semibold">PAN Card Number</label>
-                                    <input type="text" class="form-control" id="reg-pan" placeholder="ABCDE1234F">
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label small fw-semibold">Aadhaar Last 4 Digits</label>
-                                    <input type="text" class="form-control" id="reg-aadhaar" maxlength="4" placeholder="1234">
-                                </div>
                             </div>
                         </div>
 
@@ -186,12 +164,12 @@
                 payload.emergency_contact_name = document.getElementById("reg-emg-name").value.trim();
                 payload.emergency_contact_phone = document.getElementById("reg-emg-phone").value.trim();
                 payload.emergency_contact_relation = document.getElementById("reg-emg-rel").value.trim();
-                payload.id_proof_type = document.getElementById("reg-id-type").value;
-                payload.id_proof_number_masked = document.getElementById("reg-id-num").value.trim();
+                const org = document.getElementById("reg-tenant-org");
+                if (org && org.value.trim()) {
+                    payload.college_or_company_name = org.value.trim();
+                }
             } else if (selectedRole === "OWNER") {
                 payload.business_name = document.getElementById("reg-business-name").value.trim();
-                payload.pan_number = document.getElementById("reg-pan").value.trim();
-                payload.aadhaar_last4 = document.getElementById("reg-aadhaar").value.trim();
             }
 
             try {
@@ -206,3 +184,4 @@
     </script>
 </body>
 </html>
+

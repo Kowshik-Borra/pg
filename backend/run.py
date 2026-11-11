@@ -1,6 +1,6 @@
 import os
 from flask import send_from_directory, redirect
-from app import create_app
+from app import create_app, verify_database_connection
 
 env_name = os.getenv("FLASK_ENV", "development")
 app = create_app(env_name)
@@ -35,5 +35,13 @@ def serve_favicon():
 if __name__ == "__main__":
     host = os.getenv("FLASK_RUN_HOST", "127.0.0.1")
     port = int(os.getenv("FLASK_RUN_PORT", "5000"))
+
+    is_ok, db_msg = verify_database_connection(app)
+    if is_ok:
+        print(f"[DATABASE] {db_msg}")
+    else:
+        print(f"[DATABASE WARNING] {db_msg}")
+
     print(f"PG Connect Server starting at http://{host}:{port}/")
     app.run(host=host, port=port, debug=True)
+

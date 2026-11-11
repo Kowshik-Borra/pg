@@ -114,7 +114,7 @@ def list_property_complaints(property_id):
 @role_required("OWNER", "MANAGER", "SUPER_ADMIN")
 def update_complaint_status(complaint_id):
     current_user = get_current_user()
-    complaint = Complaint.query.get(complaint_id)
+    complaint = db.session.get(Complaint, complaint_id)
     if not complaint:
         raise APIException("Complaint not found.", status_code=404, code="NOT_FOUND")
 
@@ -162,3 +162,4 @@ def update_complaint_status(complaint_id):
         "message": f"Complaint status updated to {new_status}.",
         "data": complaint.to_dict()
     }), 200
+

@@ -9,8 +9,8 @@ class Tenant(db.Model):
     emergency_contact_name = db.Column(db.String(120), nullable=False)
     emergency_contact_phone = db.Column(db.String(20), nullable=False)
     emergency_contact_relation = db.Column(db.String(50), nullable=False)
-    id_proof_type = db.Column(db.String(50), nullable=False)  # Aadhaar, Passport, Driving License
-    id_proof_number_masked = db.Column(db.String(50), nullable=False)
+    id_proof_type = db.Column(db.String(50), nullable=True)  # Deprecated / optional for privacy
+    id_proof_number_masked = db.Column(db.String(50), nullable=True)
     college_or_company_name = db.Column(db.String(150), nullable=True)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
 
@@ -30,8 +30,6 @@ class Tenant(db.Model):
             "emergency_contact_name": self.emergency_contact_name,
             "emergency_contact_phone": self.emergency_contact_phone,
             "emergency_contact_relation": self.emergency_contact_relation,
-            "id_proof_type": self.id_proof_type,
-            "id_proof_number_masked": self.id_proof_number_masked,
             "college_or_company_name": self.college_or_company_name,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "active_allocation": active_alloc.to_dict() if active_alloc else None
@@ -100,3 +98,4 @@ class VisitorLog(db.Model):
             "check_out_time": str(self.check_out_time) if self.check_out_time else None,
             "relationship": self.relationship
         }
+

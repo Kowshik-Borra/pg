@@ -28,3 +28,4 @@ def register_blueprints(app):
     app.register_blueprint(admin_bp)
     app.register_blueprint(report_bp)
     app.register_blueprint(map_bp)
+

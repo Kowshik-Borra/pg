@@ -10,6 +10,13 @@ from app.models.room_bed import Room, Bed
 def app():
     test_app = create_app("testing")
     with test_app.app_context():
+        # Safeguard: ensure test database is isolated and not development or production
+        uri = str(test_app.config.get("SQLALCHEMY_DATABASE_URI", ""))
+        if not (":memory:" in uri or "test" in uri.lower()):
+            raise RuntimeError(
+                f"SAFETY GUARD: Refusing to run tests against non-test database: {uri}. "
+                "Tests must use an isolated in-memory or designated test database."
+            )
         db.create_all()
         yield test_app
         db.session.remove()

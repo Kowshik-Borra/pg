@@ -179,8 +179,8 @@ CREATE TABLE `tenants` (
   `emergency_contact_name` VARCHAR(120) NOT NULL,
   `emergency_contact_phone` VARCHAR(20) NOT NULL,
   `emergency_contact_relation` VARCHAR(50) NOT NULL,
-  `id_proof_type` VARCHAR(50) NOT NULL,
-  `id_proof_number_masked` VARCHAR(50) NOT NULL,
+  `id_proof_type` VARCHAR(50) NULL,
+  `id_proof_number_masked` VARCHAR(50) NULL,
   `college_or_company_name` VARCHAR(150) NULL,
   `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE
@@ -466,3 +466,4 @@ CREATE TABLE `audit_logs` (
 ) ENGINE=InnoDB;
 
 SET FOREIGN_KEY_CHECKS = 1;
+

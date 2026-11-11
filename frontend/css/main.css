@@ -286,3 +286,132 @@ a:hover {
     text-align: center;
     color: var(--color-text-muted);
 }
+
+/* Authenticated Dashboard Application Shell */
+.app-shell {
+    display: flex;
+    min-height: 100vh;
+    background-color: var(--color-bg-main);
+}
+
+.app-sidebar {
+    width: 250px;
+    min-width: 250px;
+    background-color: #FFFFFF;
+    border-right: 1px solid var(--color-border);
+    display: flex;
+    flex-direction: column;
+    z-index: 1000;
+}
+
+.app-sidebar-header {
+    padding: 1.25rem 1.25rem 1rem;
+    border-bottom: 1px solid var(--color-border);
+}
+
+.app-sidebar-role {
+    font-size: 0.725rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--color-primary);
+    background-color: #EFF6FF;
+    padding: 0.2rem 0.5rem;
+    border-radius: var(--radius-sm);
+    display: inline-block;
+    margin-top: 0.25rem;
+}
+
+.app-sidebar-nav {
+    padding: 0.75rem 0.5rem;
+    flex: 1;
+    overflow-y: auto;
+}
+
+.app-sidebar-nav .nav-link {
+    color: var(--color-text-main);
+    font-size: 0.9rem;
+    padding: 0.6rem 0.85rem;
+    border-radius: var(--radius-sm);
+    margin-bottom: 0.15rem;
+    display: flex;
+    align-items: center;
+    border-left: 3px solid transparent;
+    transition: background-color 0.15s ease, color 0.15s ease;
+    cursor: pointer;
+    text-decoration: none;
+}
+
+.app-sidebar-nav .nav-link:hover {
+    background-color: #F1F5F9;
+    color: var(--color-primary);
+    text-decoration: none;
+}
+
+.app-sidebar-nav .nav-link.active {
+    background-color: #EFF6FF;
+    color: var(--color-primary);
+    font-weight: 600;
+    border-left-color: var(--color-primary);
+}
+
+.app-sidebar-footer {
+    padding: 1rem 1.25rem;
+    border-top: 1px solid var(--color-border);
+    font-size: 0.825rem;
+    color: var(--color-text-muted);
+}
+
+.app-content-wrapper {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.app-topbar {
+    height: 60px;
+    background-color: #FFFFFF;
+    border-bottom: 1px solid var(--color-border);
+    padding: 0 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.app-main {
+    flex: 1;
+    padding: 1.5rem 1.75rem;
+    overflow-y: auto;
+}
+
+.app-module {
+    display: none;
+}
+
+.app-module.active {
+    display: block;
+}
+
+#property-map-picker {
+    height: 280px;
+    width: 100%;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--color-border);
+    background-color: #E2E8F0;
+}
+
+#owner-properties-map {
+    height: 500px;
+    width: 100%;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--color-border);
+    background-color: #E2E8F0;
+}
+
+@media (max-width: 991.98px) {
+    .app-sidebar-desktop {
+        display: none !important;
+    }
+}
+

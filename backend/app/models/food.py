@@ -34,3 +34,4 @@ class FoodMenu(db.Model):
             "special_dietary_notes": self.special_dietary_notes,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None
         }
+

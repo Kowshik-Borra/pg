@@ -21,3 +21,4 @@ def send_notification(user_id: int, title: str, message: str, notification_type:
         db.session.rollback()
         print(f"Warning: Failed to create notification: {e}")
         return None
+

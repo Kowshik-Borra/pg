@@ -74,3 +74,4 @@ class Bed(db.Model):
             "last_status_change": self.last_status_change.isoformat() if self.last_status_change else None,
             "notes": self.notes
         }
+

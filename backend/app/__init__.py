@@ -31,6 +31,9 @@ def create_app(config_name="development"):
         supports_credentials=True
     )
 
+    # Register models with metadata
+    from app import models
+
     # Register error handlers & routes
     register_error_handlers(app)
     register_blueprints(app)
@@ -79,3 +82,34 @@ def create_app(config_name="development"):
         }), 401
 
     return app
+
+def verify_database_connection(app):
+    """
+    Attempts to ping MySQL and returns (is_connected: bool, diagnostic_message: str).
+    Provides clear troubleshooting instructions when credentials or connection fail.
+    """
+    with app.app_context():
+        try:
+            db.session.execute(db.text("SELECT 1"))
+            return True, "MySQL 8.0 connection verified successfully."
+        except Exception as e:
+            err_str = str(e)
+            if "1045" in err_str:
+                diag = (
+                    "MySQL Authentication Failed (Error 1045): Access denied for user. "
+                    "Please update MYSQL_USER and MYSQL_PASSWORD in your .env file to match your local MySQL Server 8.0 credentials."
+                )
+            elif "2003" in err_str or "10061" in err_str or "Connection refused" in err_str:
+                diag = (
+                    "MySQL Connection Failed (Error 2003): Could not connect to MySQL Server on localhost:3306. "
+                    "Please ensure the MySQL Windows Service (MySQL80) is running."
+                )
+            elif "1049" in err_str or "Unknown database" in err_str:
+                diag = (
+                    "MySQL Database Missing (Error 1049): Database does not exist. "
+                    "Create it via MySQL client: CREATE DATABASE pg_connect_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+                )
+            else:
+                diag = f"MySQL Connection Error: {err_str}"
+            return False, diag
+
