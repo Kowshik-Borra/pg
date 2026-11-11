@@ -18,7 +18,7 @@ cross-tenant authorization breaks, stored XSS, and no token revocation.
 
 | ID | Title | Severity |
 |---|---|---|
-| AUDIT-001 | JWT signing key published in public repo → Super Admin forgery | **Critical** |
+| AUDIT-001 | JWT signing key published in public repo → Super Admin forgery | **Critical** (partially addressed: `backend/.env` still tracked) |
 | AUDIT-002 | No object-level authorization on tenant routes (read + write) | **High** |
 | AUDIT-003 | IDOR on report endpoints (invoice PDF, property Excel) | **High** |
 | AUDIT-004 | Complaint routes not scoped to property ownership | **High** |
@@ -81,7 +81,23 @@ anything beyond a local demo. Load keys from the environment only; fail fast whe
 **Verification** — `git ls-files | grep -c '^\.env'` → `0`; a token signed with any previously committed
 key returns 401 on `/api/admin/analytics`; `.gitignore` contains `.env`.
 
-**Status:** OPEN
+**Status:** **PARTIALLY ADDRESSED** (updated 2026-11-11) — upstream commit `2a5dbbd "Delete .env"` removed the
+root `.env`, but **`backend/.env` is still tracked and still contains the same `SECRET_KEY`, `JWT_SECRET_KEY`,
+`DATABASE_URL` and `MYSQL_PASSWORD`**:
+
+```
+$ git ls-tree -r --name-only origin/main | grep -E '\.env'
+.env.example
+backend/.env
+$ git show origin/main:backend/.env | grep -E '^(SECRET_KEY|JWT_SECRET_KEY)='
+SECRET_KEY=pg-con…(hidden)
+JWT_SECRET_KEY=pg-con…(hidden)
+```
+
+`.gitignore` on `main` also still does not ignore `.env` (only `.env.local` / `.env.*.local`). Until
+`backend/.env` is untracked **and both keys are rotated**, the Super Admin forgery above remains exploitable.
+
+**Status:** OPEN (Critical portion unresolved)
 
 ---
 
