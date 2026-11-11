@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Resident Portal | PG Connect</title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/css/main.css">
+</head>
+<body>
+    <div id="site-header"></div>
+
+    <div class="container py-4">
+        <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-3">
+            <div>
+                <h1 class="h3 fw-bold mb-1">Customer & Resident Portal</h1>
+                <p class="text-muted small mb-0">Track bookings, room allocation, rent receipts, and submit maintenance tickets.</p>
+            </div>
+            <a href="/pages/search.html" class="btn btn-outline-primary btn-sm">Explore PGs</a>
+        </div>
+
+        <!-- Active Stay Overview Card -->
+        <div class="card p-4 mb-4" id="stay-card">
+            <h5 class="fw-bold mb-3">Current Accommodation & Room Stay</h5>
+            <div id="stay-details-container">
+                <div class="spinner-border text-primary spinner-border-sm" role="status"></div>
+                <span class="ms-2 small text-muted">Checking residency status...</span>
+            </div>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <div class="card">
+            <div class="card-header border-bottom-0 pb-0">
+                <ul class="nav nav-tabs card-header-tabs" role="tablist">
+                    <li class="nav-item">
+                        <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-my-bookings">My Bookings</button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-my-invoices">Rent Invoices & Receipts</button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-my-complaints">Support & Complaints</button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-my-wishlist">Saved Wishlist</button>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="card-body p-4">
+                <div class="tab-content">
+                    <!-- 1. Bookings Tab -->
+                    <div class="tab-pane fade show active" id="tab-my-bookings">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle">
+                                <thead>
+                                    <tr>
+                                        <th>Ref Code</th>
+                                        <th>Property</th>
+                                        <th>Room & Bed</th>
+                                        <th>Move-In Date</th>
+                                        <th>Status</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="my-bookings-tbody">
+                                    <tr><td colspan="6" class="text-center py-4 text-muted">Loading bookings...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- 2. Rent Invoices Tab -->
+                    <div class="tab-pane fade" id="tab-my-invoices">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle">
+                                <thead>
+                                    <tr>
+                                        <th>Invoice #</th>
+                                        <th>Billing Month</th>
+                                        <th>Due Date</th>
+                                        <th>Total Billed</th>
+                                        <th>Amount Paid</th>
+                                        <th>Status</th>
+                                        <th>Receipt</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="my-invoices-tbody">
+                                    <tr><td colspan="7" class="text-center py-4 text-muted">Loading invoices...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- 3. Complaints Tab -->
+                    <div class="tab-pane fade" id="tab-my-complaints">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h6 class="fw-bold mb-0">Maintenance Tickets</h6>
+                            <button class="btn btn-primary btn-sm" onclick="openFileComplaintModal()">+ File New Complaint</button>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle">
+                                <thead>
+                                    <tr>
+                                        <th>Ticket #</th>
+                                        <th>Category</th>
+                                        <th>Title</th>
+                                        <th>Priority</th>
+                                        <th>Status</th>
+                                        <th>Date</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="my-complaints-tbody">
+                                    <tr><td colspan="6" class="text-center py-4 text-muted">Loading tickets...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- 4. Wishlist Tab -->
+                    <div class="tab-pane fade" id="tab-my-wishlist">
+                        <div class="row g-3" id="my-wishlist-grid">
+                            <div class="col-12 text-center py-4 text-muted">Loading saved properties...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- File Complaint Modal -->
+    <div class="modal fade" id="complaintModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold">Submit Maintenance Complaint</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="complaint-form" onsubmit="submitComplaint(event)">
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold">Issue Category *</label>
+                            <select class="form-select" id="comp-category" required>
+                                <option value="PLUMBING">Plumbing / Water Supply</option>
+                                <option value="ELECTRICAL">Electrical & Appliances</option>
+                                <option value="WIFI_NETWORK">Wi-Fi & Internet Connectivity</option>
+                                <option value="CLEANING">Housekeeping / Room Cleaning</option>
+                                <option value="FOOD_QUALITY">Food Quality & Mess Service</option>
+                                <option value="NOISE_DISTURBANCE">Noise Disturbance</option>
+                                <option value="OTHER">Other Issues</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold">Priority Level *</label>
+                            <select class="form-select" id="comp-priority" required>
+                                <option value="LOW">Low</option>
+                                <option value="MEDIUM" selected>Medium</option>
+                                <option value="HIGH">High (Urgent Attention)</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold">Short Title *</label>
+                            <input type="text" class="form-control" id="comp-title" required placeholder="e.g. Wi-Fi router reboot required">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold">Detailed Description *</label>
+                            <textarea class="form-control" id="comp-desc" rows="3" required placeholder="Describe the problem accurately"></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">Submit Maintenance Ticket</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Review Modal -->
+    <div class="modal fade" id="reviewModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold">Write Verified Stay Review</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="review-form" onsubmit="submitReview(event)">
+                        <input type="hidden" id="rev-alloc-id">
+                        <div class="row g-2 mb-3">
+                            <div class="col-4">
+                                <label class="form-label small fw-semibold">Overall (1-5)</label>
+                                <input type="number" min="1" max="5" class="form-control" id="rev-rating" value="5" required>
+                            </div>
+                            <div class="col-4">
+                                <label class="form-label small fw-semibold">Cleanliness</label>
+                                <input type="number" min="1" max="5" class="form-control" id="rev-clean" value="5" required>
+                            </div>
+                            <div class="col-4">
+                                <label class="form-label small fw-semibold">Food Quality</label>
+                                <input type="number" min="1" max="5" class="form-control" id="rev-food" value="5" required>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold">Your Review & Experience *</label>
+                            <textarea class="form-control" id="rev-comment" rows="3" required placeholder="Share your experience for future students and professionals"></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">Submit Verified Review</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="site-footer"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/js/config.js"></script>
+    <script src="/js/api.js"></script>
+    <script src="/js/auth.js"></script>
+    <script src="/js/main.js"></script>
+    <script>
+        let myActiveAllocId = null;
+
+        document.addEventListener("DOMContentLoaded", () => {
+            if (!Auth.requireAuth(["TENANT"])) return;
+            loadMyStay();
+            loadMyBookings();
+            loadMyInvoices();
+            loadMyComplaints();
+            loadMyWishlist();
+        });
+
+        async function loadMyStay() {
+            const container = document.getElementById("stay-details-container");
+            try {
+                const res = await API.get("/tenants/my-stay");
+                if (res.success && res.data) {
+                    const d = res.data;
+                    myActiveAllocId = d.allocation.id;
+                    container.innerHTML = `
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <div class="text-muted small">Property</div>
+                                <div class="fw-bold">${d.property.name}</div>
+                                <div class="small text-muted">${d.property.locality}, ${d.property.city}</div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="text-muted small">Allocated Unit</div>
+                                <div class="fw-bold">Room ${d.room.room_number} (${d.room.sharing_type})</div>
+                                <div class="badge badge-occupied">${d.bed.bed_label} (Occupied)</div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="text-muted small">Monthly Agreed Rent</div>
+                                <div class="fw-bold text-primary">${formatCurrency(d.allocation.monthly_rent_agreed)}/mo</div>
+                                <div class="small text-muted">Checked in on ${d.allocation.check_in_date}</div>
+                            </div>
+                            <div class="col-md-2 d-flex align-items-center">
+                                <button class="btn btn-outline-primary btn-sm w-100" onclick="openReviewModal(${d.allocation.id})">Review Stay</button>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    container.innerHTML = `
+                        <p class="text-muted small mb-2">You do not have an active checked-in room allocation currently.</p>
+                        <a href="/pages/search.html" class="btn btn-primary btn-sm">Find and Book a PG</a>
+                    `;
+                }
+            } catch(e) {
+                container.innerHTML = `<p class="text-muted small">Residency status unavailable.</p>`;
+            }
+        }
+
+        async function loadMyBookings() {
+            try {
+                const res = await API.get("/bookings/my-bookings");
+                const tbody = document.getElementById("my-bookings-tbody");
+                if (!res.success || !res.data || res.data.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-muted">No booking requests submitted yet.</td></tr>`;
+                    return;
+                }
+
+                tbody.innerHTML = res.data.map(b => `
+                    <tr>
+                        <td class="fw-semibold">${b.booking_reference}</td>
+                        <td>${b.property_name} (${b.property_city})</td>
+                        <td>Room ${b.room_number || '--'} (${b.bed_label || 'Auto'})</td>
+                        <td>${b.preferred_move_in_date}</td>
+                        <td><span class="badge ${getBookingBadge(b.status)}">${b.status}</span></td>
+                        <td>
+                            ${(b.status === 'PENDING' || b.status === 'APPROVED') ? `
+                                <button class="btn btn-outline-danger btn-sm py-0 px-2" onclick="cancelBooking(${b.id})">Cancel</button>
+                            ` : `<span class="small text-muted">${b.status}</span>`}
+                        </td>
+                    </tr>
+                `).join("");
+            } catch(e) {}
+        }
+
+        function getBookingBadge(status) {
+            switch(status) {
+                case "PENDING": return "badge-reserved";
+                case "APPROVED": return "badge-available";
+                case "COMPLETED": return "badge-verified";
+                case "REJECTED": case "CANCELLED": return "badge-occupied";
+                default: return "badge-maintenance";
+            }
+        }
+
+        async function cancelBooking(id) {
+            if (!confirm("Are you sure you want to cancel this booking request?")) return;
+            try {
+                const res = await API.post(`/bookings/${id}/cancel`, { reason: "Cancelled by resident" });
+                if (res.success) {
+                    alert("Booking cancelled.");
+                    loadMyBookings();
+                }
+            } catch(err) {
+                alert(err.message || "Failed to cancel booking.");
+            }
+        }
+
+        async function loadMyInvoices() {
+            try {
+                const res = await API.get("/finance/invoices/my-invoices");
+                const tbody = document.getElementById("my-invoices-tbody");
+                if (!res.success || !res.data || res.data.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="7" class="text-center py-4 text-muted">No rent invoices issued.</td></tr>`;
+                    return;
+                }
+
+                tbody.innerHTML = res.data.map(inv => `
+                    <tr>
+                        <td class="fw-semibold">${inv.invoice_number}</td>
+                        <td>${inv.billing_month}/${inv.billing_year}</td>
+                        <td>${inv.due_date}</td>
+                        <td class="fw-semibold">${formatCurrency(inv.total_amount_due)}</td>
+                        <td>${formatCurrency(inv.amount_paid)}</td>
+                        <td><span class="badge ${inv.status === 'PAID' ? 'badge-available' : 'badge-reserved'}">${inv.status}</span></td>
+                        <td>
+                            <a href="/api/reports/invoices/${inv.id}/pdf" class="btn btn-outline-primary btn-sm py-0 px-2">Download PDF</a>
+                        </td>
+                    </tr>
+                `).join("");
+            } catch(e) {}
+        }
+
+        async function loadMyComplaints() {
+            try {
+                const res = await API.get("/complaints/my-complaints");
+                const tbody = document.getElementById("my-complaints-tbody");
+                if (!res.success || !res.data || res.data.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-muted">No complaints filed.</td></tr>`;
+                    return;
+                }
+
+                tbody.innerHTML = res.data.map(c => `
+                    <tr>
+                        <td class="fw-semibold">${c.ticket_number}</td>
+                        <td><span class="badge bg-light text-dark border">${c.category}</span></td>
+                        <td>${c.title}</td>
+                        <td><span class="badge ${c.priority === 'HIGH' ? 'bg-danger text-white' : 'bg-light text-dark border'}">${c.priority}</span></td>
+                        <td><span class="badge ${c.status === 'RESOLVED' ? 'badge-available' : 'badge-reserved'}">${c.status}</span></td>
+                        <td>${formatDate(c.created_at)}</td>
+                    </tr>
+                `).join("");
+            } catch(e) {}
+        }
+
+        function openFileComplaintModal() {
+            if (!myActiveAllocId) {
+                alert("You need an active check-in allocation to file a maintenance complaint.");
+                return;
+            }
+            new bootstrap.Modal(document.getElementById("complaintModal")).show();
+        }
+
+        async function submitComplaint(e) {
+            e.preventDefault();
+            const formData = new FormData();
+            formData.append("category", document.getElementById("comp-category").value);
+            formData.append("priority", document.getElementById("comp-priority").value);
+            formData.append("title", document.getElementById("comp-title").value.trim());
+            formData.append("description", document.getElementById("comp-desc").value.trim());
+
+            try {
+                const res = await API.post("/complaints", formData);
+                if (res.success) {
+                    bootstrap.Modal.getInstance(document.getElementById("complaintModal")).hide();
+                    document.getElementById("complaint-form").reset();
+                    alert("Complaint ticket created successfully.");
+                    loadMyComplaints();
+                }
+            } catch(err) {
+                alert(err.message || "Failed to file complaint.");
+            }
+        }
+
+        function openReviewModal(allocId) {
+            document.getElementById("rev-alloc-id").value = allocId;
+            new bootstrap.Modal(document.getElementById("reviewModal")).show();
+        }
+
+        async function submitReview(e) {
+            e.preventDefault();
+            const allocId = parseInt(document.getElementById("rev-alloc-id").value);
+            const rating = parseInt(document.getElementById("rev-rating").value);
+            const clean = parseInt(document.getElementById("rev-clean").value);
+            const food = parseInt(document.getElementById("rev-food").value);
+            const comment = document.getElementById("rev-comment").value.trim();
+
+            try {
+                const res = await API.post("/reviews", {
+                    allocation_id: allocId,
+                    rating,
+                    cleanliness_rating: clean,
+                    food_rating: food,
+                    comment
+                });
+                if (res.success) {
+                    bootstrap.Modal.getInstance(document.getElementById("reviewModal")).hide();
+                    alert("Thank you! Your verified resident review is published.");
+                }
+            } catch(err) {
+                alert(err.message || "Failed to submit review.");
+            }
+        }
+
+        async function loadMyWishlist() {
+            try {
+                const res = await API.get("/wishlist");
+                const grid = document.getElementById("my-wishlist-grid");
+                if (!res.success || !res.data || res.data.length === 0) {
+                    grid.innerHTML = `<div class="col-12 text-center py-4 text-muted">No saved properties in your wishlist.</div>`;
+                    return;
+                }
+
+                grid.innerHTML = res.data.map(w => {
+                    const p = w.property;
+                    if (!p) return "";
+                    return `
+                        <div class="col-md-4">
+                            <div class="card p-3 h-100">
+                                <h6 class="fw-bold mb-1">${p.name}</h6>
+                                <p class="small text-muted mb-2">${p.locality}, ${p.city}</p>
+                                <div class="mt-auto d-flex justify-content-between align-items-center">
+                                    <span class="text-primary fw-bold">${formatCurrency(p.min_rent)}/mo</span>
+                                    <a href="/pages/pg-details.html?id=${p.id}" class="btn btn-outline-primary btn-sm">View</a>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join("");
+            } catch(e) {}
+        }
+    </script>
+</body>
+</html>

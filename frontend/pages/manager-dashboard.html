@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manager Operations Portal | PG Connect</title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/css/main.css">
+</head>
+<body>
+    <div id="site-header"></div>
+
+    <div class="container py-4">
+        <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-3">
+            <div>
+                <h1 class="h3 fw-bold mb-1">PG Manager Operations Portal</h1>
+                <p class="text-muted small mb-0">Daily resident management, check-in, check-out, payments, and complaint ticketing.</p>
+            </div>
+            <button class="btn btn-primary btn-sm" onclick="openCheckInModal()">+ Check In Resident</button>
+        </div>
+
+        <!-- Quick Summary Cards -->
+        <div class="row g-3 mb-4">
+            <div class="col-md-4">
+                <div class="stat-card">
+                    <div class="stat-label">Resident Check-Ins</div>
+                    <div class="stat-value text-primary" id="mgr-active-tenants">0</div>
+                    <div class="small text-muted mt-1">Active Residents</div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="stat-card">
+                    <div class="stat-label">Pending Invoices</div>
+                    <div class="stat-value text-warning" id="mgr-pending-inv">0</div>
+                    <div class="small text-muted mt-1">Awaiting Collection</div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="stat-card">
+                    <div class="stat-label">Open Complaints</div>
+                    <div class="stat-value text-danger" id="mgr-open-complaints">0</div>
+                    <div class="small text-muted mt-1">Requires Attention</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Action Workspace -->
+        <div class="card p-3 mb-4">
+            <h6 class="fw-bold mb-3">Resident Complaints and Maintenance Tasks</h6>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead>
+                        <tr>
+                            <th>Ticket #</th>
+                            <th>Tenant</th>
+                            <th>Category</th>
+                            <th>Description</th>
+                            <th>Priority</th>
+                            <th>Status</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="mgr-complaints-tbody">
+                        <tr><td colspan="7" class="text-center py-4 text-muted">Loading complaints...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Visitor Log Card -->
+        <div class="card p-3">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h6 class="fw-bold mb-0">Visitor Security Log</h6>
+                <button class="btn btn-outline-secondary btn-sm" onclick="openVisitorModal()">+ Log Visitor</button>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-bordered small">
+                    <thead>
+                        <tr>
+                            <th>Visitor Name</th>
+                            <th>Phone</th>
+                            <th>Date</th>
+                            <th>Check-In Time</th>
+                            <th>Relationship</th>
+                        </tr>
+                    </thead>
+                    <tbody id="mgr-visitors-tbody">
+                        <tr><td colspan="5" class="text-center py-3 text-muted">No visitor entries today.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Check-In Modal -->
+    <div class="modal fade" id="checkInModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold">Check-In New Resident</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="checkin-form" onsubmit="submitCheckIn(event)">
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold">Tenant User ID *</label>
+                            <input type="number" class="form-control" id="checkin-user-id" required placeholder="User ID from registration">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold">Bed ID *</label>
+                            <input type="number" class="form-control" id="checkin-bed-id" required placeholder="Physical Bed ID">
+                        </div>
+                        <div class="row g-2 mb-3">
+                            <div class="col-6">
+                                <label class="form-label small fw-semibold">Monthly Rent (INR) *</label>
+                                <input type="number" class="form-control" id="checkin-rent" required placeholder="9500">
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label small fw-semibold">Security Deposit (INR) *</label>
+                                <input type="number" class="form-control" id="checkin-deposit" required placeholder="18000">
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">Confirm Check-In and Mark Bed OCCUPIED</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Visitor Modal -->
+    <div class="modal fade" id="visitorModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold">Log Visitor Entry</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="visitor-form" onsubmit="submitVisitorLog(event)">
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold">Visitor Name *</label>
+                            <input type="text" class="form-control" id="vis-name" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold">Visitor Phone *</label>
+                            <input type="tel" class="form-control" id="vis-phone" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold">Relationship to Resident</label>
+                            <input type="text" class="form-control" id="vis-rel" placeholder="e.g. Friend, Parent">
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">Record Visitor Entry</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="site-footer"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/js/config.js"></script>
+    <script src="/js/api.js"></script>
+    <script src="/js/auth.js"></script>
+    <script src="/js/main.js"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            if (!Auth.requireAuth(["MANAGER", "OWNER", "SUPER_ADMIN"])) return;
+            loadManagerWorkspace();
+        });
+
+        async function loadManagerWorkspace() {
+            // Load property 1 by default
+            try {
+                const res = await API.get("/complaints/property/1");
+                const tbody = document.getElementById("mgr-complaints-tbody");
+                if (res.success && res.data && res.data.length > 0) {
+                    const open = res.data.filter(c => c.status !== "RESOLVED" && c.status !== "CLOSED").length;
+                    document.getElementById("mgr-open-complaints").innerText = open;
+
+                    tbody.innerHTML = res.data.map(c => `
+                        <tr>
+                            <td class="fw-semibold">${c.ticket_number}</td>
+                            <td>${c.tenant_name}</td>
+                            <td><span class="badge bg-light text-dark border">${c.category}</span></td>
+                            <td>${c.title}</td>
+                            <td><span class="badge ${c.priority === 'HIGH' || c.priority === 'URGENT' ? 'bg-danger text-white' : 'bg-light text-dark border'}">${c.priority}</span></td>
+                            <td><span class="badge ${c.status === 'RESOLVED' ? 'badge-available' : 'badge-reserved'}">${c.status}</span></td>
+                            <td>
+                                ${c.status !== 'RESOLVED' ? `
+                                    <button class="btn btn-outline-success btn-sm py-0 px-2" onclick="resolveTicket(${c.id})">Resolve</button>
+                                ` : `<span class="small text-muted">Closed</span>`}
+                            </td>
+                        </tr>
+                    `).join("");
+                } else {
+                    tbody.innerHTML = `<tr><td colspan="7" class="text-center py-4 text-muted">No open complaints for this property.</td></tr>`;
+                }
+
+                // Load residents count
+                const tRes = await API.get("/tenants/property/1");
+                if (tRes.success && tRes.data) {
+                    document.getElementById("mgr-active-tenants").innerText = tRes.data.length;
+                }
+
+                // Load visitors
+                const vRes = await API.get("/tenants/visitors/property/1");
+                if (vRes.success && vRes.data && vRes.data.length > 0) {
+                    document.getElementById("mgr-visitors-tbody").innerHTML = vRes.data.map(v => `
+                        <tr>
+                            <td class="fw-semibold">${v.visitor_name}</td>
+                            <td>${v.visitor_phone}</td>
+                            <td>${v.visit_date}</td>
+                            <td>${v.check_in_time}</td>
+                            <td>${v.relationship}</td>
+                        </tr>
+                    `).join("");
+                }
+            } catch(e) {
+                console.error(e);
+            }
+        }
+
+        async function resolveTicket(id) {
+            const note = prompt("Enter resolution notes:", "Inspected and resolved on premises.");
+            if (!note) return;
+            try {
+                const res = await API.patch(`/complaints/${id}/status`, { status: "RESOLVED", note });
+                if (res.success) {
+                    alert("Ticket marked as resolved.");
+                    loadManagerWorkspace();
+                }
+            } catch(e) {
+                alert(e.message || "Failed to update ticket.");
+            }
+        }
+
+        function openCheckInModal() {
+            new bootstrap.Modal(document.getElementById("checkInModal")).show();
+        }
+
+        async function submitCheckIn(e) {
+            e.preventDefault();
+            const userId = parseInt(document.getElementById("checkin-user-id").value);
+            const bedId = parseInt(document.getElementById("checkin-bed-id").value);
+            const rent = parseFloat(document.getElementById("checkin-rent").value);
+            const dep = parseFloat(document.getElementById("checkin-deposit").value);
+
+            try {
+                const res = await API.post("/tenants/check-in", {
+                    user_id: userId,
+                    bed_id: bedId,
+                    monthly_rent_agreed: rent,
+                    security_deposit_paid: dep
+                });
+                if (res.success) {
+                    bootstrap.Modal.getInstance(document.getElementById("checkInModal")).hide();
+                    alert("Resident checked in successfully. Bed status updated to OCCUPIED.");
+                    loadManagerWorkspace();
+                }
+            } catch(err) {
+                alert(err.message || "Check-in failed.");
+            }
+        }
+
+        function openVisitorModal() {
+            new bootstrap.Modal(document.getElementById("visitorModal")).show();
+        }
+
+        async function submitVisitorLog(e) {
+            e.preventDefault();
+            const name = document.getElementById("vis-name").value.trim();
+            const phone = document.getElementById("vis-phone").value.trim();
+            const rel = document.getElementById("vis-rel").value.trim();
+
+            try {
+                const res = await API.post("/tenants/visitors", {
+                    property_id: 1,
+                    tenant_id: 1,
+                    visitor_name: name,
+                    visitor_phone: phone,
+                    relationship: rel
+                });
+                if (res.success) {
+                    bootstrap.Modal.getInstance(document.getElementById("visitorModal")).hide();
+                    document.getElementById("visitor-form").reset();
+                    loadManagerWorkspace();
+                }
+            } catch(err) {
+                alert(err.message || "Failed to log visitor.");
+            }
+        }
+    </script>
+</body>
+</html>

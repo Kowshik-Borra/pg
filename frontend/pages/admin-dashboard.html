@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Platform Administration | PG Connect</title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/css/main.css">
+</head>
+<body>
+    <div id="site-header"></div>
+
+    <div class="container-fluid px-lg-5 py-4">
+        <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-3">
+            <div>
+                <h1 class="h3 fw-bold mb-1">Super Admin Governance Portal</h1>
+                <p class="text-muted small mb-0">Platform-wide statistics, property verification queue, user moderation, and audit logs.</p>
+            </div>
+            <button class="btn btn-outline-secondary btn-sm" onclick="loadAdminData()">Refresh Analytics</button>
+        </div>
+
+        <!-- Real Platform Metrics Row -->
+        <div class="row g-3 mb-4">
+            <div class="col-6 col-md-3">
+                <div class="stat-card">
+                    <div class="stat-label">Total Users</div>
+                    <div class="stat-value" id="adm-users-total">0</div>
+                    <div class="small text-muted mt-1" id="adm-users-breakdown">0 Owners | 0 Tenants</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="stat-card">
+                    <div class="stat-label">Properties</div>
+                    <div class="stat-value text-primary" id="adm-props-total">0</div>
+                    <div class="small text-muted mt-1" id="adm-props-verified">0 Verified</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="stat-card">
+                    <div class="stat-label">Pending Verification</div>
+                    <div class="stat-value text-warning" id="adm-props-pending">0</div>
+                    <div class="small text-muted mt-1">Awaiting Review</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="stat-card">
+                    <div class="stat-label">Revenue Processed</div>
+                    <div class="stat-value text-success" id="adm-revenue-total">Rs. 0</div>
+                    <div class="small text-muted mt-1" id="adm-active-tenants">0 Active Residents</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Admin Tabs -->
+        <div class="card">
+            <div class="card-header border-bottom-0 pb-0">
+                <ul class="nav nav-tabs card-header-tabs" role="tablist">
+                    <li class="nav-item">
+                        <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-verifications">Property Verification Queue</button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-users">User Management</button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-audit">System Audit Logs</button>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="card-body p-4">
+                <div class="tab-content">
+                    <!-- 1. Verification Queue Tab -->
+                    <div class="tab-pane fade show active" id="tab-verifications">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle">
+                                <thead>
+                                    <tr>
+                                        <th>Property ID</th>
+                                        <th>Property Name</th>
+                                        <th>Submission Date</th>
+                                        <th>Current Status</th>
+                                        <th>Reviewed By</th>
+                                        <th>Moderation Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="verifications-tbody">
+                                    <tr><td colspan="6" class="text-center py-4 text-muted">Loading verifications...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- 2. Users Tab -->
+                    <div class="tab-pane fade" id="tab-users">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Name</th>
+                                        <th>Email</th>
+                                        <th>Phone</th>
+                                        <th>Role</th>
+                                        <th>Account Status</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="users-tbody">
+                                    <tr><td colspan="7" class="text-center py-4 text-muted">Loading users...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- 3. Audit Logs Tab -->
+                    <div class="tab-pane fade" id="tab-audit">
+                        <div class="table-responsive">
+                            <table class="table table-bordered small">
+                                <thead>
+                                    <tr>
+                                        <th>Timestamp</th>
+                                        <th>Action</th>
+                                        <th>Entity</th>
+                                        <th>User</th>
+                                        <th>IP Address</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="audit-tbody">
+                                    <tr><td colspan="5" class="text-center py-4 text-muted">Loading audit entries...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="site-footer"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/js/config.js"></script>
+    <script src="/js/api.js"></script>
+    <script src="/js/auth.js"></script>
+    <script src="/js/main.js"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            if (!Auth.requireAuth(["SUPER_ADMIN"])) return;
+            loadAdminData();
+        });
+
+        async function loadAdminData() {
+            loadAnalytics();
+            loadVerifications();
+            loadUsers();
+            loadAuditLogs();
+        }
+
+        async function loadAnalytics() {
+            try {
+                const res = await API.get("/admin/analytics");
+                if (res.success && res.data) {
+                    const d = res.data;
+                    document.getElementById("adm-users-total").innerText = d.users.total;
+                    document.getElementById("adm-users-breakdown").innerText = `${d.users.owners} Owners | ${d.users.tenants} Tenants`;
+                    document.getElementById("adm-props-total").innerText = d.properties.total;
+                    document.getElementById("adm-props-verified").innerText = `${d.properties.verified} Verified`;
+                    document.getElementById("adm-props-pending").innerText = d.properties.pending_verification;
+                    document.getElementById("adm-revenue-total").innerText = formatCurrency(d.operations.total_revenue_collected);
+                    document.getElementById("adm-active-tenants").innerText = `${d.operations.active_tenants} Active Residents`;
+                }
+            } catch(e) {}
+        }
+
+        async function loadVerifications() {
+            try {
+                const res = await API.get("/admin/verifications");
+                const tbody = document.getElementById("verifications-tbody");
+                if (!res.success || !res.data || res.data.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-muted">No pending property verifications.</td></tr>`;
+                    return;
+                }
+
+                tbody.innerHTML = res.data.map(v => `
+                    <tr>
+                        <td class="fw-semibold">#${v.property_id}</td>
+                        <td>${v.property_name || 'PG Property #' + v.property_id}</td>
+                        <td>${formatDate(v.created_at)}</td>
+                        <td><span class="badge ${v.status === 'APPROVED' ? 'badge-available' : 'badge-reserved'}">${v.status}</span></td>
+                        <td>${v.reviewed_by || 'Pending Review'}</td>
+                        <td>
+                            ${v.status !== 'APPROVED' ? `
+                                <button class="btn btn-outline-success btn-sm py-0 px-2" onclick="moderateProperty(${v.property_id}, 'APPROVE')">Approve</button>
+                                <button class="btn btn-outline-danger btn-sm py-0 px-2 ms-1" onclick="moderateProperty(${v.property_id}, 'REJECT')">Reject</button>
+                            ` : `<span class="small text-muted">Verified</span>`}
+                        </td>
+                    </tr>
+                `).join("");
+            } catch(e) {}
+        }
+
+        async function moderateProperty(propId, decision) {
+            let reason = "";
+            if (decision === "REJECT") {
+                reason = prompt("Provide reason for rejection:", "Listing lacks required address documents or photos.");
+                if (!reason) return;
+            }
+
+            try {
+                const res = await API.post(`/admin/properties/${propId}/verify`, { decision, reason });
+                if (res.success) {
+                    alert(res.message);
+                    loadAnalytics();
+                    loadVerifications();
+                }
+            } catch(err) {
+                alert(err.message || "Failed to update property status.");
+            }
+        }
+
+        async function loadUsers() {
+            try {
+                const res = await API.get("/admin/users");
+                const tbody = document.getElementById("users-tbody");
+                if (!res.success || !res.data) return;
+
+                tbody.innerHTML = res.data.map(u => `
+                    <tr>
+                        <td class="fw-semibold">#${u.id}</td>
+                        <td>${u.full_name}</td>
+                        <td>${u.email}</td>
+                        <td>${u.phone}</td>
+                        <td><span class="badge bg-light text-dark border">${u.role}</span></td>
+                        <td><span class="badge ${u.is_active ? 'badge-available' : 'badge-occupied'}">${u.is_active ? 'Active' : 'Suspended'}</span></td>
+                        <td>
+                            <button class="btn ${u.is_active ? 'btn-outline-danger' : 'btn-outline-success'} btn-sm py-0 px-2" onclick="toggleUser(${u.id}, ${!u.is_active})">
+                                ${u.is_active ? 'Suspend' : 'Activate'}
+                            </button>
+                        </td>
+                    </tr>
+                `).join("");
+            } catch(e) {}
+        }
+
+        async function toggleUser(userId, newStatus) {
+            if (!confirm(`Are you sure you want to ${newStatus ? 'activate' : 'suspend'} this user account?`)) return;
+            try {
+                const res = await API.patch(`/admin/users/${userId}/status`, { is_active: newStatus });
+                if (res.success) {
+                    alert(res.message);
+                    loadUsers();
+                }
+            } catch(err) {
+                alert(err.message || "Action failed.");
+            }
+        }
+
+        async function loadAuditLogs() {
+            try {
+                const res = await API.get("/admin/audit-logs");
+                const tbody = document.getElementById("audit-tbody");
+                if (!res.success || !res.data || res.data.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-muted">No audit logs recorded.</td></tr>`;
+                    return;
+                }
+
+                tbody.innerHTML = res.data.map(l => `
+                    <tr>
+                        <td class="text-muted">${formatDate(l.created_at)}</td>
+                        <td class="fw-semibold">${l.action}</td>
+                        <td>${l.entity_name} #${l.entity_id || '--'}</td>
+                        <td>${l.user_name}</td>
+                        <td class="text-muted">${l.ip_address || 'Localhost'}</td>
+                    </tr>
+                `).join("");
+            } catch(e) {}
+        }
+    </script>
+</body>
+</html>

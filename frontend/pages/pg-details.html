@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Property Details | PG Connect</title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <link rel="stylesheet" href="/css/main.css">
+</head>
+<body>
+    <div id="site-header"></div>
+
+    <div class="container py-4">
+        <!-- Breadcrumb -->
+        <nav aria-label="breadcrumb" class="mb-3">
+            <ol class="breadcrumb small">
+                <li class="breadcrumb-item"><a href="/">Home</a></li>
+                <li class="breadcrumb-item"><a href="/pages/search.html">Explore PGs</a></li>
+                <li class="breadcrumb-item active" id="breadcrumb-title" aria-current="page">Property Details</li>
+            </ol>
+        </nav>
+
+        <div id="loading-spinner" class="text-center py-5">
+            <div class="spinner-border text-primary" role="status"></div>
+            <p class="text-muted small mt-2">Loading property data...</p>
+        </div>
+
+        <div id="property-content" style="display: none;">
+            <!-- Header section -->
+            <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
+                <div>
+                    <div class="d-flex align-items-center gap-2 mb-1">
+                        <span class="badge bg-light text-dark border" id="prop-type-badge">BOYS</span>
+                        <span class="badge badge-verified" id="prop-verified-badge">Verified Listing</span>
+                    </div>
+                    <h1 class="h2 fw-bold mb-1" id="prop-name">Property Name</h1>
+                    <p class="text-muted mb-0" id="prop-full-address">Full Address, Locality, City</p>
+                </div>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-outline-secondary" onclick="toggleWishlist()">
+                        <span id="wishlist-btn-text">Save to Wishlist</span>
+                    </button>
+                    <button class="btn btn-primary" onclick="openBookingModal()">
+                        Request Booking
+                    </button>
+                </div>
+            </div>
+
+            <!-- Photos & Quick Specs Row -->
+            <div class="row g-4 mb-4">
+                <div class="col-lg-8">
+                    <div class="card overflow-hidden">
+                        <img id="prop-hero-img" src="" class="img-fluid" style="max-height: 420px; width: 100%; object-fit: cover;" alt="PG Photograph">
+                    </div>
+                </div>
+                <div class="col-lg-4">
+                    <div class="card p-3 h-100">
+                        <h6 class="fw-bold mb-3 border-bottom pb-2">Overview & Conditions</h6>
+                        <ul class="list-unstyled small mb-4">
+                            <li class="d-flex justify-content-between py-2 border-bottom">
+                                <span class="text-muted">Monthly Rent Starts:</span>
+                                <strong id="spec-rent" class="text-primary">Rs. 0</strong>
+                            </li>
+                            <li class="d-flex justify-content-between py-2 border-bottom">
+                                <span class="text-muted">Notice Period:</span>
+                                <strong id="spec-notice">30 Days</strong>
+                            </li>
+                            <li class="d-flex justify-content-between py-2 border-bottom">
+                                <span class="text-muted">Gate Closing:</span>
+                                <strong id="spec-gate">22:30 IST</strong>
+                            </li>
+                            <li class="d-flex justify-content-between py-2 border-bottom">
+                                <span class="text-muted">Available Beds:</span>
+                                <strong id="spec-beds" class="text-success">0 Available</strong>
+                            </li>
+                            <li class="d-flex justify-content-between py-2 border-bottom">
+                                <span class="text-muted">Contact Phone:</span>
+                                <strong id="spec-phone">--</strong>
+                            </li>
+                            <li class="d-flex justify-content-between py-2">
+                                <span class="text-muted">Contact Email:</span>
+                                <strong id="spec-email">--</strong>
+                            </li>
+                        </ul>
+
+                        <button class="btn btn-primary w-100 mt-auto" onclick="openBookingModal()">
+                            Submit Booking Request
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Description & Facilities -->
+            <div class="row g-4 mb-4">
+                <div class="col-lg-8">
+                    <div class="card p-4 mb-4">
+                        <h5 class="fw-bold mb-3">About This Accommodation</h5>
+                        <p id="prop-description" class="text-muted mb-4"></p>
+
+                        <h6 class="fw-bold mb-2">House Rules</h6>
+                        <p id="prop-rules" class="text-muted small mb-0"></p>
+                    </div>
+
+                    <!-- Room & Real Bed Availability Inventory -->
+                    <div class="card p-4 mb-4">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h5 class="fw-bold mb-0">Rooms and Physical Bed Availability</h5>
+                            <span class="small text-muted">Real-time status</span>
+                        </div>
+                        <div id="rooms-inventory-container">
+                            <!-- Populated with real physical bed states -->
+                        </div>
+                    </div>
+
+                    <!-- Food Schedule -->
+                    <div class="card p-4 mb-4">
+                        <h5 class="fw-bold mb-3">Food & Mess Schedule</h5>
+                        <div class="table-responsive">
+                            <table class="table table-bordered small">
+                                <thead>
+                                    <tr>
+                                        <th>Day</th>
+                                        <th>Breakfast</th>
+                                        <th>Lunch</th>
+                                        <th>Dinner</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="food-schedule-tbody">
+                                    <!-- Populated dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Verified Reviews Section -->
+                    <div class="card p-4">
+                        <h5 class="fw-bold mb-3">Verified Resident Reviews</h5>
+                        <div id="reviews-container">
+                            <!-- Genuine reviews only -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Facilities & Map Sidebar -->
+                <div class="col-lg-4">
+                    <div class="card p-3 mb-4">
+                        <h6 class="fw-bold mb-3 border-bottom pb-2">Facilities & Amenities</h6>
+                        <div class="row g-2" id="facilities-list">
+                            <!-- Facilities checkboxes/badges -->
+                        </div>
+                    </div>
+
+                    <div class="card p-3">
+                        <h6 class="fw-bold mb-2">Location & Map</h6>
+                        <div id="details-map" class="mb-3"></div>
+                        <a id="get-directions-btn" href="#" target="_blank" rel="noopener noreferrer" class="btn btn-outline-primary btn-sm w-100">
+                            Get Directions on Google Maps
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Booking Request Modal -->
+    <div class="modal fade" id="bookingModal" tabindex="-1" aria-labelledby="bookingModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold" id="bookingModalLabel">Submit Booking Request</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="small text-muted mb-3">
+                        Your request will be delivered directly to the PG owner. Upon approval, your bed will be reserved exclusively for 48 hours.
+                    </p>
+                    <form id="booking-form" onsubmit="submitBookingRequest(event)">
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold">Select Room</label>
+                            <select class="form-select" id="booking-room-select" onchange="populateBedOptions()" required>
+                                <option value="">Select a room...</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold">Select Bed (Optional)</label>
+                            <select class="form-select" id="booking-bed-select">
+                                <option value="">Auto-assign first available bed</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold">Preferred Move-in Date</label>
+                            <input type="date" class="form-control" id="booking-date" required>
+                        </div>
+                        <div class="alert alert-danger py-2 small" id="booking-error-msg" style="display: none;"></div>
+                        <button type="submit" class="btn btn-primary w-100" id="booking-submit-btn">
+                            Confirm and Request Reservation
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="site-footer"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script src="/js/config.js"></script>
+    <script src="/js/api.js"></script>
+    <script src="/js/auth.js"></script>
+    <script src="/js/main.js"></script>
+    <script>
+        let currentProperty = null;
+        let detailsMap = null;
+
+        document.addEventListener("DOMContentLoaded", () => {
+            const propId = new URLSearchParams(window.location.search).get("id");
+            if (!propId) {
+                alert("Invalid property request.");
+                window.location.href = "/pages/search.html";
+                return;
+            }
+            loadPropertyDetails(propId);
+            loadPropertyReviews(propId);
+            loadPropertyMenu(propId);
+
+            // Set minimum booking date to today
+            const today = new Date().toISOString().split("T")[0];
+            document.getElementById("booking-date").min = today;
+            document.getElementById("booking-date").value = today;
+        });
+
+        async function loadPropertyDetails(id) {
+            try {
+                const res = await API.get(`/properties/${id}`);
+                if (!res.success || !res.data) throw new Error("Property not found");
+                currentProperty = res.data;
+                renderPropertyData(res.data);
+            } catch (err) {
+                document.getElementById("loading-spinner").innerHTML = `
+                    <div class="text-danger py-5">
+                        <h5>Property listing not found or inactive.</h5>
+                        <a href="/pages/search.html" class="btn btn-outline-primary btn-sm mt-2">Back to Search</a>
+                    </div>
+                `;
+            }
+        }
+
+        function renderPropertyData(p) {
+            document.getElementById("loading-spinner").style.display = "none";
+            document.getElementById("property-content").style.display = "block";
+
+            document.getElementById("breadcrumb-title").innerText = p.name;
+            document.getElementById("prop-name").innerText = p.name;
+            document.getElementById("prop-type-badge").innerText = p.property_type;
+            document.getElementById("prop-verified-badge").innerText = p.is_verified ? "Verified Property" : "Pending Verification";
+            document.getElementById("prop-full-address").innerText = `${p.address_line1}, ${p.address_line2 ? p.address_line2 + ', ' : ''}${p.locality}, ${p.city} - ${p.pincode}`;
+
+            const heroImg = p.photos && p.photos.length > 0 ? p.photos[0].file_path : "https://images.unsplash.com/photo-1555854877-bab0e564b8d5?auto=format&fit=crop&w=1000&q=80";
+            document.getElementById("prop-hero-img").src = heroImg;
+
+            document.getElementById("spec-rent").innerText = formatCurrency(p.min_rent) + "/mo";
+            document.getElementById("spec-notice").innerText = `${p.notice_period_days} Days`;
+            document.getElementById("spec-gate").innerText = `${p.gate_closing_time || '22:30'} IST`;
+            document.getElementById("spec-beds").innerText = `${p.available_beds} Available`;
+            document.getElementById("spec-phone").innerText = p.contact_phone;
+            document.getElementById("spec-email").innerText = p.contact_email;
+
+            document.getElementById("prop-description").innerText = p.description;
+            document.getElementById("prop-rules").innerText = p.rules || "No smoking or alcohol on premises. Quiet hours after 22:00.";
+
+            // Render Facilities List
+            const fac = p.facilities || {};
+            const facItems = [
+                { key: "has_wifi", label: "High-Speed Wi-Fi" },
+                { key: "has_ac", label: "Air Conditioning" },
+                { key: "has_washing_machine", label: "Washing Machine" },
+                { key: "has_parking", label: "Vehicle Parking" },
+                { key: "has_housekeeping", label: "Daily Housekeeping" },
+                { key: "has_cctv", label: "24/7 CCTV Security" },
+                { key: "has_drinking_water", label: "RO Drinking Water" },
+                { key: "has_power_backup", label: "Power Backup" },
+                { key: "has_attached_washroom", label: "Attached Bathroom" },
+                { key: "has_biometric_access", label: "Biometric Access" }
+            ];
+
+            document.getElementById("facilities-list").innerHTML = facItems.map(f => `
+                <div class="col-6">
+                    <span class="small ${fac[f.key] ? 'text-dark fw-semibold' : 'text-muted text-decoration-line-through'}">
+                        ${fac[f.key] ? '[Yes]' : '[No]'} ${f.label}
+                    </span>
+                </div>
+            `).join("");
+
+            // Render Rooms and Physical Beds
+            renderRoomsInventory(p.rooms || []);
+
+            // Setup Map
+            if (p.latitude && p.longitude) {
+                const lat = parseFloat(p.latitude);
+                const lng = parseFloat(p.longitude);
+                detailsMap = L.map('details-map').setView([lat, lng], 14);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    maxZoom: 19,
+                    attribution: 'OpenStreetMap'
+                }).addTo(detailsMap);
+                L.marker([lat, lng]).addTo(detailsMap).bindPopup(`<strong>${p.name}</strong><br>${p.locality}`).openPopup();
+
+                document.getElementById("get-directions-btn").href = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
+            }
+
+            // Populate booking modal rooms dropdown
+            const roomSelect = document.getElementById("booking-room-select");
+            roomSelect.innerHTML = `<option value="">Select a room...</option>` + (p.rooms || []).map(r => `
+                <option value="${r.id}" data-rent="${r.monthly_rent_per_bed}">
+                    Room ${r.room_number} (${r.sharing_type}) - ${formatCurrency(r.monthly_rent_per_bed)}/mo [${r.available_beds} beds free]
+                </option>
+            `).join("");
+        }
+
+        function renderRoomsInventory(rooms) {
+            const container = document.getElementById("rooms-inventory-container");
+            if (!rooms || rooms.length === 0) {
+                container.innerHTML = `<p class="text-muted small">No rooms listed currently.</p>`;
+                return;
+            }
+
+            container.innerHTML = rooms.map(r => `
+                <div class="border rounded p-3 mb-3">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <div>
+                            <strong class="h6 mb-0">Room ${r.room_number}</strong>
+                            <span class="badge bg-light text-dark border ms-2">${r.sharing_type}</span>
+                            <span class="small text-muted ms-2">Floor ${r.floor_number}</span>
+                        </div>
+                        <div>
+                            <span class="text-primary fw-bold">${formatCurrency(r.monthly_rent_per_bed)}</span>
+                            <span class="text-muted small">/bed/mo</span>
+                        </div>
+                    </div>
+                    <div class="small text-muted mb-2">
+                        Security Deposit: ${formatCurrency(r.security_deposit_per_bed)} | ${r.has_ac ? 'AC' : 'Non-AC'} | ${r.has_attached_bathroom ? 'Attached Washroom' : 'Shared Washroom'}
+                    </div>
+                    <div class="d-flex flex-wrap gap-2 mt-2 pt-2 border-top">
+                        ${(r.beds || []).map(b => `
+                            <span class="badge ${getBedBadgeClass(b.status)}">
+                                ${b.bed_label}: ${b.status}
+                            </span>
+                        `).join("")}
+                    </div>
+                </div>
+            `).join("");
+        }
+
+        function getBedBadgeClass(status) {
+            switch(status) {
+                case "AVAILABLE": return "badge-available";
+                case "OCCUPIED": return "badge-occupied";
+                case "RESERVED": return "badge-reserved";
+                default: return "badge-maintenance";
+            }
+        }
+
+        async function loadPropertyMenu(id) {
+            try {
+                const res = await API.get(`/food/property/${id}`);
+                const tbody = document.getElementById("food-schedule-tbody");
+                if (!res.success || !res.data.all_items || res.data.all_items.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="4" class="text-center text-muted">No scheduled meal data available.</td></tr>`;
+                    return;
+                }
+                const sched = res.data.schedule;
+                const days = ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY"];
+                tbody.innerHTML = days.map(d => {
+                    const meals = sched[d] || [];
+                    const bf = meals.find(m => m.meal_type === "BREAKFAST")?.items_menu || "--";
+                    const lunch = meals.find(m => m.meal_type === "LUNCH")?.items_menu || "--";
+                    const dinner = meals.find(m => m.meal_type === "DINNER")?.items_menu || "--";
+                    return `
+                        <tr>
+                            <td class="fw-semibold">${d}</td>
+                            <td>${bf}</td>
+                            <td>${lunch}</td>
+                            <td>${dinner}</td>
+                        </tr>
+                    `;
+                }).join("");
+            } catch(e) {}
+        }
+
+        async function loadPropertyReviews(id) {
+            const container = document.getElementById("reviews-container");
+            try {
+                const res = await API.get(`/properties/${id}/reviews`);
+                if (!res.success || !res.data || res.data.length === 0) {
+                    container.innerHTML = `<p class="text-muted small">No verified resident reviews yet.</p>`;
+                    return;
+                }
+                container.innerHTML = res.data.map(r => `
+                    <div class="border-bottom pb-3 mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <strong class="small">${r.reviewer_name}</strong>
+                            <span class="badge bg-light text-dark border">${r.rating}/5 Stars</span>
+                        </div>
+                        <p class="small text-muted mb-1">${r.comment}</p>
+                        <div class="small text-muted" style="font-size: 0.75rem;">
+                            Cleanliness: ${r.cleanliness_rating}/5 | Food: ${r.food_rating}/5 | Verified Stay: ${formatDate(r.created_at)}
+                        </div>
+                    </div>
+                `).join("");
+            } catch(e) {
+                container.innerHTML = `<p class="text-muted small">Reviews unavailable.</p>`;
+            }
+        }
+
+        function populateBedOptions() {
+            const roomId = document.getElementById("booking-room-select").value;
+            const bedSelect = document.getElementById("booking-bed-select");
+            bedSelect.innerHTML = `<option value="">Auto-assign first available bed</option>`;
+            if (!roomId || !currentProperty) return;
+
+            const room = currentProperty.rooms.find(r => r.id == roomId);
+            if (!room || !room.beds) return;
+
+            const availableBeds = room.beds.filter(b => b.status === "AVAILABLE");
+            availableBeds.forEach(b => {
+                bedSelect.innerHTML += `<option value="${b.id}">${b.bed_label} (Available)</option>`;
+            });
+        }
+
+        function openBookingModal() {
+            if (!Auth.isAuthenticated()) {
+                window.location.href = `/pages/login.html?redirect=${encodeURIComponent(window.location.pathname + window.location.search)}`;
+                return;
+            }
+            const modal = new bootstrap.Modal(document.getElementById("bookingModal"));
+            modal.show();
+        }
+
+        async function submitBookingRequest(e) {
+            e.preventDefault();
+            const btn = document.getElementById("booking-submit-btn");
+            const errDiv = document.getElementById("booking-error-msg");
+            errDiv.style.display = "none";
+            btn.disabled = true;
+
+            const roomId = document.getElementById("booking-room-select").value;
+            const bedId = document.getElementById("booking-bed-select").value || null;
+            const moveInDate = document.getElementById("booking-date").value;
+
+            try {
+                const res = await API.post("/bookings", {
+                    property_id: currentProperty.id,
+                    room_id: parseInt(roomId),
+                    bed_id: bedId ? parseInt(bedId) : null,
+                    preferred_move_in_date: moveInDate
+                });
+
+                if (res.success) {
+                    alert("Booking request submitted successfully! Reference: " + res.data.booking_reference);
+                    window.location.href = "/pages/tenant-dashboard.html";
+                }
+            } catch (err) {
+                errDiv.innerText = err.message || "Failed to submit booking request.";
+                errDiv.style.display = "block";
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        async function toggleWishlist() {
+            if (!Auth.isAuthenticated()) {
+                window.location.href = `/pages/login.html?redirect=${encodeURIComponent(window.location.pathname + window.location.search)}`;
+                return;
+            }
+            try {
+                const res = await API.post(`/wishlist/${currentProperty.id}`, {});
+                if (res.success) {
+                    document.getElementById("wishlist-btn-text").innerText = "Saved to Wishlist";
+                    alert(res.message);
+                }
+            } catch (err) {
+                alert(err.message || "Failed to update wishlist.");
+            }
+        }
+    </script>
+</body>
+</html>

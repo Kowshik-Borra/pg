@@ -1,0 +1,1020 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Owner Business Portal | PG Connect</title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/css/main.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
+<body>
+    <div id="site-header"></div>
+
+    <div class="container-fluid px-lg-5 py-4">
+        <!-- Top bar -->
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4 border-bottom pb-3">
+            <div>
+                <h1 class="h3 fw-bold mb-1">PG Owner Business Dashboard</h1>
+                <p class="text-muted small mb-0">Manage buildings, physical bed vacancies, bookings, rent invoices, and operational expenses.</p>
+            </div>
+            <div class="d-flex gap-2 align-items-center">
+                <label class="small text-muted fw-semibold">Active Property:</label>
+                <select class="form-select form-select-sm" id="owner-property-select" onchange="handlePropertyChange()" style="min-width: 240px;">
+                    <option value="">Loading properties...</option>
+                </select>
+                <button class="btn btn-primary btn-sm" onclick="openAddPropertyModal()">+ Add New PG</button>
+            </div>
+        </div>
+
+        <!-- Real Database Metrics Cards Row -->
+        <div class="row g-3 mb-4">
+            <div class="col-6 col-md-3">
+                <div class="stat-card">
+                    <div class="stat-label">Total Beds</div>
+                    <div class="stat-value" id="card-total-beds">0</div>
+                    <div class="small text-muted mt-1" id="card-rooms-count">0 Rooms</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="stat-card">
+                    <div class="stat-label">Available Beds</div>
+                    <div class="stat-value text-success" id="card-available-beds">0</div>
+                    <div class="small text-muted mt-1" id="card-occupancy-rate">0% Occupancy</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="stat-card">
+                    <div class="stat-label">Rent Collected</div>
+                    <div class="stat-value text-primary" id="card-rent-collected">Rs. 0</div>
+                    <div class="small text-muted mt-1" id="card-pending-rent">Rs. 0 Pending</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="stat-card">
+                    <div class="stat-label">Pending Bookings</div>
+                    <div class="stat-value text-warning" id="card-pending-bookings">0</div>
+                    <div class="small text-muted mt-1">Requires Approval</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts Row -->
+        <div class="row g-4 mb-4">
+            <div class="col-lg-8">
+                <div class="card p-3 h-100">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h6 class="fw-bold mb-0">Financial Overview: Revenue vs Expenses</h6>
+                        <span class="small text-muted">All amounts in INR</span>
+                    </div>
+                    <div style="height: 250px;">
+                        <canvas id="revenueExpensesChart"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-4">
+                <div class="card p-3 h-100">
+                    <h6 class="fw-bold mb-3">Real-Time Bed Occupancy</h6>
+                    <div style="height: 250px;" class="d-flex justify-content-center align-items-center">
+                        <canvas id="occupancyDoughnutChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Workspace Tabs -->
+        <div class="card">
+            <div class="card-header border-bottom-0 pb-0">
+                <ul class="nav nav-tabs card-header-tabs" id="ownerTabs" role="tablist">
+                    <li class="nav-item">
+                        <button class="nav-link active" id="tab-bookings-btn" data-bs-toggle="tab" data-bs-target="#tab-bookings">Booking Requests</button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link" id="tab-rooms-btn" data-bs-toggle="tab" data-bs-target="#tab-rooms">Rooms & Bed Inventory</button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link" id="tab-tenants-btn" data-bs-toggle="tab" data-bs-target="#tab-tenants">Active Residents</button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link" id="tab-invoices-btn" data-bs-toggle="tab" data-bs-target="#tab-invoices">Rent & Invoicing</button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link" id="tab-expenses-btn" data-bs-toggle="tab" data-bs-target="#tab-expenses">Operating Expenses</button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link" id="tab-food-btn" data-bs-toggle="tab" data-bs-target="#tab-food">Food Menu</button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link" id="tab-complaints-btn" data-bs-toggle="tab" data-bs-target="#tab-complaints">Complaints</button>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="card-body p-4">
+                <div class="tab-content" id="ownerTabContent">
+                    <!-- 1. Bookings Tab -->
+                    <div class="tab-pane fade show active" id="tab-bookings">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h6 class="fw-bold mb-0">Booking Requests for Selected Property</h6>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle">
+                                <thead>
+                                    <tr>
+                                        <th>Ref Code</th>
+                                        <th>Customer</th>
+                                        <th>Phone</th>
+                                        <th>Room & Bed</th>
+                                        <th>Move-in Date</th>
+                                        <th>Status</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="bookings-tbody">
+                                    <tr><td colspan="7" class="text-center py-4 text-muted">Loading bookings...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- 2. Rooms and Beds Tab -->
+                    <div class="tab-pane fade" id="tab-rooms">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h6 class="fw-bold mb-0">Rooms and Physical Beds</h6>
+                            <button class="btn btn-outline-primary btn-sm" onclick="openAddRoomModal()">+ Add Room</button>
+                        </div>
+                        <div id="owner-rooms-container">
+                            <!-- Populated with rooms and bed statuses -->
+                        </div>
+                    </div>
+
+                    <!-- 3. Active Residents Tab -->
+                    <div class="tab-pane fade" id="tab-tenants">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h6 class="fw-bold mb-0">Active Resident Tenants</h6>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle">
+                                <thead>
+                                    <tr>
+                                        <th>Resident Name</th>
+                                        <th>Contact</th>
+                                        <th>Room / Bed</th>
+                                        <th>Check-in Date</th>
+                                        <th>Monthly Rent</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tenants-tbody">
+                                    <tr><td colspan="6" class="text-center py-4 text-muted">Loading residents...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- 4. Rent & Invoices Tab -->
+                    <div class="tab-pane fade" id="tab-invoices">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h6 class="fw-bold mb-0">Monthly Rent Invoices & Collections</h6>
+                            <div class="d-flex gap-2">
+                                <button class="btn btn-outline-secondary btn-sm" onclick="downloadPropertyExcel()">Download Excel Report</button>
+                            </div>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle">
+                                <thead>
+                                    <tr>
+                                        <th>Invoice #</th>
+                                        <th>Tenant</th>
+                                        <th>Period</th>
+                                        <th>Billed (INR)</th>
+                                        <th>Paid (INR)</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="invoices-tbody">
+                                    <tr><td colspan="7" class="text-center py-4 text-muted">Loading invoices...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- 5. Expenses Tab -->
+                    <div class="tab-pane fade" id="tab-expenses">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h6 class="fw-bold mb-0">Operating Expense Ledger</h6>
+                            <button class="btn btn-outline-primary btn-sm" onclick="openAddExpenseModal()">+ Record Expense</button>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Category</th>
+                                        <th>Description</th>
+                                        <th>Amount (INR)</th>
+                                        <th>Recorded By</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="expenses-tbody">
+                                    <tr><td colspan="5" class="text-center py-4 text-muted">Loading expenses...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- 6. Food Menu Tab -->
+                    <div class="tab-pane fade" id="tab-food">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h6 class="fw-bold mb-0">Weekly Meal Configuration</h6>
+                            <button class="btn btn-outline-primary btn-sm" onclick="openUpdateFoodModal()">Update Meal Item</button>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-bordered small">
+                                <thead>
+                                    <tr>
+                                        <th>Day</th>
+                                        <th>Breakfast</th>
+                                        <th>Lunch</th>
+                                        <th>Dinner</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="owner-food-tbody">
+                                    <tr><td colspan="4" class="text-center py-4 text-muted">Loading food menu...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- 7. Complaints Tab -->
+                    <div class="tab-pane fade" id="tab-complaints">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h6 class="fw-bold mb-0">Maintenance & Complaints Ticketing</h6>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle">
+                                <thead>
+                                    <tr>
+                                        <th>Ticket #</th>
+                                        <th>Tenant</th>
+                                        <th>Category</th>
+                                        <th>Title</th>
+                                        <th>Priority</th>
+                                        <th>Status</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="complaints-tbody">
+                                    <tr><td colspan="7" class="text-center py-4 text-muted">Loading complaints...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Property Modal -->
+    <div class="modal fade" id="addPropertyModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold">Register New PG Property</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="add-property-form" onsubmit="submitAddProperty(event)">
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-8">
+                                <label class="form-label small fw-semibold">Property Name *</label>
+                                <input type="text" class="form-control" id="prop-in-name" required placeholder="e.g. Royal Living Executive PG">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label small fw-semibold">Accommodation Type *</label>
+                                <select class="form-select" id="prop-in-type" required>
+                                    <option value="BOYS">BOYS</option>
+                                    <option value="GIRLS">GIRLS</option>
+                                    <option value="CO_ED">CO_ED</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label small fw-semibold">Address Line 1 *</label>
+                                <input type="text" class="form-control" id="prop-in-addr1" required placeholder="#123, 4th Cross">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small fw-semibold">Locality / Area *</label>
+                                <input type="text" class="form-control" id="prop-in-locality" required placeholder="Koramangala">
+                            </div>
+                        </div>
+
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-4">
+                                <label class="form-label small fw-semibold">City *</label>
+                                <input type="text" class="form-control" id="prop-in-city" required placeholder="Bengaluru">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label small fw-semibold">State *</label>
+                                <input type="text" class="form-control" id="prop-in-state" required placeholder="Karnataka">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label small fw-semibold">Pincode *</label>
+                                <input type="text" class="form-control" id="prop-in-pin" required placeholder="560095">
+                            </div>
+                        </div>
+
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label small fw-semibold">Latitude</label>
+                                <input type="number" step="0.000001" class="form-control" id="prop-in-lat" value="12.9352">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small fw-semibold">Longitude</label>
+                                <input type="number" step="0.000001" class="form-control" id="prop-in-lng" value="77.6245">
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold">Description *</label>
+                            <textarea class="form-control" id="prop-in-desc" rows="3" required placeholder="Detailed information regarding rooms, food, cleaning, etc."></textarea>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary w-100" id="prop-save-btn">Register and Submit for Verification</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Room Modal -->
+    <div class="modal fade" id="addRoomModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold">Add Room to Property</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="add-room-form" onsubmit="submitAddRoom(event)">
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label small fw-semibold">Room Number *</label>
+                                <input type="text" class="form-control" id="room-in-number" required placeholder="e.g. 104">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small fw-semibold">Floor Number</label>
+                                <input type="number" class="form-control" id="room-in-floor" value="1">
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold">Sharing Category *</label>
+                            <select class="form-select" id="room-in-sharing" required>
+                                <option value="SINGLE">Single Sharing (1 Physical Bed)</option>
+                                <option value="DOUBLE" selected>Double Sharing (2 Physical Beds)</option>
+                                <option value="TRIPLE">Triple Sharing (3 Physical Beds)</option>
+                                <option value="FOUR">Four Sharing (4 Physical Beds)</option>
+                            </select>
+                        </div>
+
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label small fw-semibold">Monthly Rent / Bed (INR) *</label>
+                                <input type="number" class="form-control" id="room-in-rent" required placeholder="9500">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small fw-semibold">Security Deposit / Bed (INR) *</label>
+                                <input type="number" class="form-control" id="room-in-deposit" required placeholder="18000">
+                            </div>
+                        </div>
+
+                        <div class="row g-3 mb-3">
+                            <div class="col-6">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="room-in-ac">
+                                    <label class="form-check-label small" for="room-in-ac">AC Room</label>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="room-in-bath" checked>
+                                    <label class="form-check-label small" for="room-in-bath">Attached Bathroom</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary w-100">Create Room and Initialize Beds</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Record Payment Modal -->
+    <div class="modal fade" id="paymentModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold">Record Rent Payment</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="record-payment-form" onsubmit="submitRecordPayment(event)">
+                        <input type="hidden" id="pay-invoice-id">
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold">Invoice Details</label>
+                            <input type="text" class="form-control" id="pay-invoice-display" readonly>
+                        </div>
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label small fw-semibold">Amount Paid (INR) *</label>
+                                <input type="number" step="0.01" class="form-control" id="pay-amount" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small fw-semibold">Payment Mode *</label>
+                                <select class="form-select" id="pay-mode" required>
+                                    <option value="UPI">UPI (Google Pay / PhonePe)</option>
+                                    <option value="CASH">Cash</option>
+                                    <option value="BANK_TRANSFER">Bank IMPS / NEFT</option>
+                                    <option value="CHEQUE">Cheque</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold">Transaction Reference / UTR Number</label>
+                            <input type="text" class="form-control" id="pay-ref" placeholder="e.g. UPI/405912389101">
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">Verify and Record Payment</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Expense Modal -->
+    <div class="modal fade" id="addExpenseModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold">Record Operating Expense</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="add-expense-form" onsubmit="submitAddExpense(event)">
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label small fw-semibold">Category *</label>
+                                <select class="form-select" id="exp-category" required>
+                                    <option value="ELECTRICITY">Electricity Bill</option>
+                                    <option value="WATER">Water Supply</option>
+                                    <option value="GROCERY_FOOD">Grocery & Food</option>
+                                    <option value="MAINTENANCE">Repairs & Maintenance</option>
+                                    <option value="INTERNET">Internet / Wi-Fi</option>
+                                    <option value="SALARY">Staff Salary</option>
+                                    <option value="MISCELLANEOUS">Miscellaneous</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small fw-semibold">Amount (INR) *</label>
+                                <input type="number" step="0.01" class="form-control" id="exp-amount" required placeholder="5000">
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold">Description *</label>
+                            <input type="text" class="form-control" id="exp-desc" required placeholder="e.g. Monthly Wi-Fi optical fiber bill">
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">Save Expense Entry</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="site-footer"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/js/config.js"></script>
+    <script src="/js/api.js"></script>
+    <script src="/js/auth.js"></script>
+    <script src="/js/main.js"></script>
+    <script>
+        let myProperties = [];
+        let currentPropId = null;
+        let revChart = null;
+        let occChart = null;
+
+        document.addEventListener("DOMContentLoaded", async () => {
+            if (!Auth.requireAuth(["OWNER", "SUPER_ADMIN"])) return;
+            await loadOwnerProperties();
+        });
+
+        async function loadOwnerProperties() {
+            try {
+                const res = await API.get("/properties/owner/my-properties");
+                if (res.success && res.data) {
+                    myProperties = res.data;
+                    const select = document.getElementById("owner-property-select");
+                    if (myProperties.length === 0) {
+                        select.innerHTML = `<option value="">No properties registered yet</option>`;
+                        return;
+                    }
+
+                    select.innerHTML = myProperties.map(p => `
+                        <option value="${p.id}">${p.name} (${p.city})</option>
+                    `).join("");
+
+                    currentPropId = myProperties[0].id;
+                    await refreshDashboard();
+                }
+            } catch(e) {
+                console.error(e);
+            }
+        }
+
+        async function handlePropertyChange() {
+            currentPropId = parseInt(document.getElementById("owner-property-select").value);
+            await refreshDashboard();
+        }
+
+        async function refreshDashboard() {
+            if (!currentPropId) return;
+            loadPropertySummary();
+            loadBookings();
+            loadRooms();
+            loadTenants();
+            loadInvoices();
+            loadExpenses();
+            loadFoodMenu();
+            loadComplaints();
+        }
+
+        async function loadPropertySummary() {
+            try {
+                const res = await API.get(`/finance/summary/property/${currentPropId}`);
+                if (res.success && res.data) {
+                    const d = res.data;
+                    document.getElementById("card-total-beds").innerText = d.total_beds;
+                    document.getElementById("card-available-beds").innerText = d.available_beds;
+                    document.getElementById("card-occupancy-rate").innerText = `${d.occupancy_percentage}% Occupancy`;
+                    document.getElementById("card-rent-collected").innerText = formatCurrency(d.total_collected);
+                    document.getElementById("card-pending-rent").innerText = `${formatCurrency(d.pending_receivables)} Pending`;
+
+                    renderCharts(d);
+                }
+            } catch(e) {}
+        }
+
+        function renderCharts(d) {
+            // Revenue vs Expenses Bar Chart
+            const ctxRev = document.getElementById("revenueExpensesChart");
+            if (revChart) revChart.destroy();
+            revChart = new Chart(ctxRev, {
+                type: "bar",
+                data: {
+                    labels: ["Total Billed", "Total Collected", "Total Expenses", "Net Operating Income"],
+                    datasets: [{
+                        label: "INR",
+                        data: [d.total_billed, d.total_collected, d.total_expenses, d.net_operating_income],
+                        backgroundColor: ["#94A3B8", "#2563EB", "#B91C1C", "#15803D"]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } }
+                }
+            });
+
+            // Bed Occupancy Doughnut Chart
+            const ctxOcc = document.getElementById("occupancyDoughnutChart");
+            if (occChart) occChart.destroy();
+            occChart = new Chart(ctxOcc, {
+                type: "doughnut",
+                data: {
+                    labels: ["Occupied Beds", "Available Beds"],
+                    datasets: [{
+                        data: [d.occupied_beds, d.available_beds],
+                        backgroundColor: ["#B91C1C", "#15803D"]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false
+                }
+            });
+        }
+
+        async function loadBookings() {
+            try {
+                const res = await API.get(`/bookings/property/${currentPropId}`);
+                const tbody = document.getElementById("bookings-tbody");
+                if (!res.success || !res.data || res.data.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="7" class="text-center py-4 text-muted">No booking requests found.</td></tr>`;
+                    document.getElementById("card-pending-bookings").innerText = 0;
+                    return;
+                }
+
+                const pendingCount = res.data.filter(b => b.status === "PENDING").length;
+                document.getElementById("card-pending-bookings").innerText = pendingCount;
+
+                tbody.innerHTML = res.data.map(b => `
+                    <tr>
+                        <td class="fw-semibold">${b.booking_reference}</td>
+                        <td>${b.customer_name}</td>
+                        <td>${b.customer_phone}</td>
+                        <td>Room ${b.room_number || '--'} (${b.bed_label || 'Auto'})</td>
+                        <td>${b.preferred_move_in_date}</td>
+                        <td><span class="badge ${getBookingBadge(b.status)}">${b.status}</span></td>
+                        <td>
+                            ${b.status === 'PENDING' ? `
+                                <button class="btn btn-outline-success btn-sm py-0 px-2" onclick="approveBooking(${b.id})">Approve (Lock Bed)</button>
+                                <button class="btn btn-outline-danger btn-sm py-0 px-2 ms-1" onclick="rejectBooking(${b.id})">Reject</button>
+                            ` : `<span class="small text-muted">${b.status}</span>`}
+                        </td>
+                    </tr>
+                `).join("");
+            } catch(e) {}
+        }
+
+        function getBookingBadge(status) {
+            switch(status) {
+                case "PENDING": return "badge-reserved";
+                case "APPROVED": return "badge-available";
+                case "COMPLETED": return "badge-verified";
+                case "REJECTED": case "CANCELLED": return "badge-occupied";
+                default: return "badge-maintenance";
+            }
+        }
+
+        async function approveBooking(id) {
+            if (!confirm("Approve this booking? The selected bed will be reserved exclusively for 48 hours.")) return;
+            try {
+                const res = await API.post(`/bookings/${id}/approve`, { remarks: "Approved by Owner" });
+                if (res.success) {
+                    alert("Booking approved and bed reserved.");
+                    refreshDashboard();
+                }
+            } catch(err) {
+                alert(err.message || "Failed to approve booking.");
+            }
+        }
+
+        async function rejectBooking(id) {
+            const reason = prompt("Enter reason for rejection:", "Bed unavailable for selected dates.");
+            if (!reason) return;
+            try {
+                const res = await API.post(`/bookings/${id}/reject`, { reason });
+                if (res.success) {
+                    alert("Booking rejected.");
+                    refreshDashboard();
+                }
+            } catch(err) {
+                alert(err.message || "Failed to reject booking.");
+            }
+        }
+
+        async function loadRooms() {
+            try {
+                const res = await API.get(`/properties/${currentPropId}`);
+                const container = document.getElementById("owner-rooms-container");
+                if (!res.success || !res.data.rooms || res.data.rooms.length === 0) {
+                    container.innerHTML = `<p class="text-muted small">No rooms created yet. Click "+ Add Room" above.</p>`;
+                    return;
+                }
+
+                document.getElementById("card-rooms-count").innerText = `${res.data.rooms.length} Rooms`;
+
+                container.innerHTML = res.data.rooms.map(r => `
+                    <div class="border rounded p-3 mb-3 bg-white">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <div>
+                                <strong class="h6 mb-0">Room ${r.room_number}</strong>
+                                <span class="badge bg-light text-dark border ms-2">${r.sharing_type}</span>
+                                <span class="small text-muted ms-2">Floor ${r.floor_number}</span>
+                            </div>
+                            <div>
+                                <span class="text-primary fw-bold">${formatCurrency(r.monthly_rent_per_bed)}</span>
+                                <span class="text-muted small">/bed/mo</span>
+                            </div>
+                        </div>
+                        <div class="d-flex flex-wrap gap-2 mt-2 pt-2 border-top align-items-center">
+                            <span class="small text-muted me-2">Individual Beds:</span>
+                            ${(r.beds || []).map(b => `
+                                <div class="btn-group btn-group-sm">
+                                    <span class="btn btn-outline-secondary disabled">${b.bed_label}: ${b.status}</span>
+                                    ${b.status !== 'OCCUPIED' ? `
+                                        <button class="btn btn-outline-secondary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown"></button>
+                                        <ul class="dropdown-menu dropdown-menu-end small">
+                                            <li><a class="dropdown-item" href="#" onclick="changeBedStatus(${b.id}, 'AVAILABLE')">Mark AVAILABLE</a></li>
+                                            <li><a class="dropdown-item" href="#" onclick="changeBedStatus(${b.id}, 'MAINTENANCE')">Mark MAINTENANCE</a></li>
+                                            <li><a class="dropdown-item" href="#" onclick="changeBedStatus(${b.id}, 'INACTIVE')">Mark INACTIVE</a></li>
+                                        </ul>
+                                    ` : ''}
+                                </div>
+                            `).join("")}
+                        </div>
+                    </div>
+                `).join("");
+            } catch(e) {}
+        }
+
+        async function changeBedStatus(bedId, status) {
+            try {
+                const res = await API.patch(`/beds/${bedId}/status`, { status });
+                if (res.success) {
+                    refreshDashboard();
+                }
+            } catch(err) {
+                alert(err.message || "Failed to update bed status.");
+            }
+        }
+
+        async function loadTenants() {
+            try {
+                const res = await API.get(`/tenants/property/${currentPropId}`);
+                const tbody = document.getElementById("tenants-tbody");
+                if (!res.success || !res.data || res.data.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-muted">No active resident tenants.</td></tr>`;
+                    return;
+                }
+
+                tbody.innerHTML = res.data.map(item => `
+                    <tr>
+                        <td class="fw-semibold">${item.tenant.user.full_name}</td>
+                        <td>${item.tenant.user.phone}</td>
+                        <td>Room ${item.allocation.room_number} (${item.allocation.bed_label})</td>
+                        <td>${item.allocation.check_in_date}</td>
+                        <td>${formatCurrency(item.allocation.monthly_rent_agreed)}</td>
+                        <td>
+                            <button class="btn btn-outline-danger btn-sm py-0 px-2" onclick="initiateCheckout(${item.allocation.id})">Check Out</button>
+                        </td>
+                    </tr>
+                `).join("");
+            } catch(e) {}
+        }
+
+        async function initiateCheckout(allocId) {
+            if (!confirm("Process tenant check-out and release this bed back to inventory?")) return;
+            const deduction = prompt("Enter deposit deduction amount (INR), or 0 for full refund:", "0");
+            if (deduction === null) return;
+            try {
+                const res = await API.post(`/tenants/allocations/${allocId}/check-out`, {
+                    deductions_amount: parseFloat(deduction) || 0.0,
+                    deduction_reason: deduction > 0 ? "Maintenance / cleaning fee" : "Full deposit returned"
+                });
+                if (res.success) {
+                    alert("Tenant checked out and bed returned to available status.");
+                    refreshDashboard();
+                }
+            } catch(err) {
+                alert(err.message || "Checkout failed.");
+            }
+        }
+
+        async function loadInvoices() {
+            try {
+                const res = await API.get(`/finance/invoices/property/${currentPropId}`);
+                const tbody = document.getElementById("invoices-tbody");
+                if (!res.success || !res.data || res.data.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="7" class="text-center py-4 text-muted">No invoices generated yet.</td></tr>`;
+                    return;
+                }
+
+                tbody.innerHTML = res.data.map(inv => `
+                    <tr>
+                        <td class="fw-semibold">${inv.invoice_number}</td>
+                        <td>${inv.tenant_name}</td>
+                        <td>${inv.billing_month}/${inv.billing_year}</td>
+                        <td>${formatCurrency(inv.total_amount_due)}</td>
+                        <td>${formatCurrency(inv.amount_paid)}</td>
+                        <td><span class="badge ${inv.status === 'PAID' ? 'badge-available' : 'badge-reserved'}">${inv.status}</span></td>
+                        <td>
+                            ${inv.status !== 'PAID' ? `
+                                <button class="btn btn-outline-primary btn-sm py-0 px-2" onclick="openPaymentModal(${inv.id}, '${inv.invoice_number}', ${inv.balance_due})">Record Payment</button>
+                            ` : `<span class="small text-muted">Fully Paid</span>`}
+                            <a href="/api/reports/invoices/${inv.id}/pdf" class="btn btn-link btn-sm py-0 px-1 text-primary">PDF</a>
+                        </td>
+                    </tr>
+                `).join("");
+            } catch(e) {}
+        }
+
+        function openPaymentModal(invId, invNum, balance) {
+            document.getElementById("pay-invoice-id").value = invId;
+            document.getElementById("pay-invoice-display").value = `${invNum} (Balance Due: Rs. ${balance})`;
+            document.getElementById("pay-amount").value = balance;
+            new bootstrap.Modal(document.getElementById("paymentModal")).show();
+        }
+
+        async function submitRecordPayment(e) {
+            e.preventDefault();
+            const invId = document.getElementById("pay-invoice-id").value;
+            const amount = parseFloat(document.getElementById("pay-amount").value);
+            const method = document.getElementById("pay-mode").value;
+            const ref = document.getElementById("pay-ref").value.trim();
+
+            try {
+                const res = await API.post("/finance/payments", {
+                    invoice_id: parseInt(invId),
+                    amount,
+                    payment_method: method,
+                    transaction_reference: ref
+                });
+                if (res.success) {
+                    bootstrap.Modal.getInstance(document.getElementById("paymentModal")).hide();
+                    alert("Payment recorded successfully.");
+                    refreshDashboard();
+                }
+            } catch(err) {
+                alert(err.message || "Payment recording failed.");
+            }
+        }
+
+        async function loadExpenses() {
+            try {
+                const res = await API.get(`/finance/expenses/property/${currentPropId}`);
+                const tbody = document.getElementById("expenses-tbody");
+                if (!res.success || !res.data || res.data.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-muted">No expense records.</td></tr>`;
+                    return;
+                }
+
+                tbody.innerHTML = res.data.map(exp => `
+                    <tr>
+                        <td>${exp.expense_date}</td>
+                        <td><span class="badge bg-light text-dark border">${exp.category}</span></td>
+                        <td>${exp.description}</td>
+                        <td class="fw-semibold text-danger">${formatCurrency(exp.amount)}</td>
+                        <td>${exp.recorded_by || 'Owner'}</td>
+                    </tr>
+                `).join("");
+            } catch(e) {}
+        }
+
+        function openAddExpenseModal() {
+            new bootstrap.Modal(document.getElementById("addExpenseModal")).show();
+        }
+
+        async function submitAddExpense(e) {
+            e.preventDefault();
+            const category = document.getElementById("exp-category").value;
+            const amount = parseFloat(document.getElementById("exp-amount").value);
+            const desc = document.getElementById("exp-desc").value.trim();
+
+            try {
+                const res = await API.post("/finance/expenses", {
+                    property_id: currentPropId,
+                    category,
+                    amount,
+                    description: desc
+                });
+                if (res.success) {
+                    bootstrap.Modal.getInstance(document.getElementById("addExpenseModal")).hide();
+                    document.getElementById("add-expense-form").reset();
+                    refreshDashboard();
+                }
+            } catch(err) {
+                alert(err.message || "Failed to record expense.");
+            }
+        }
+
+        async function loadFoodMenu() {
+            try {
+                const res = await API.get(`/food/property/${currentPropId}`);
+                const tbody = document.getElementById("owner-food-tbody");
+                if (!res.success || !res.data.all_items || res.data.all_items.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="4" class="text-center py-4 text-muted">No meal items configured.</td></tr>`;
+                    return;
+                }
+                const sched = res.data.schedule;
+                const days = ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY"];
+                tbody.innerHTML = days.map(d => {
+                    const meals = sched[d] || [];
+                    const bf = meals.find(m => m.meal_type === "BREAKFAST")?.items_menu || "--";
+                    const lunch = meals.find(m => m.meal_type === "LUNCH")?.items_menu || "--";
+                    const dinner = meals.find(m => m.meal_type === "DINNER")?.items_menu || "--";
+                    return `
+                        <tr>
+                            <td class="fw-semibold">${d}</td>
+                            <td>${bf}</td>
+                            <td>${lunch}</td>
+                            <td>${dinner}</td>
+                        </tr>
+                    `;
+                }).join("");
+            } catch(e) {}
+        }
+
+        async function loadComplaints() {
+            try {
+                const res = await API.get(`/complaints/property/${currentPropId}`);
+                const tbody = document.getElementById("complaints-tbody");
+                if (!res.success || !res.data || res.data.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="7" class="text-center py-4 text-muted">No open complaints.</td></tr>`;
+                    return;
+                }
+
+                tbody.innerHTML = res.data.map(c => `
+                    <tr>
+                        <td class="fw-semibold">${c.ticket_number}</td>
+                        <td>${c.tenant_name}</td>
+                        <td><span class="badge bg-light text-dark border">${c.category}</span></td>
+                        <td>${c.title}</td>
+                        <td><span class="badge ${c.priority === 'HIGH' || c.priority === 'URGENT' ? 'bg-danger text-white' : 'bg-light text-dark border'}">${c.priority}</span></td>
+                        <td><span class="badge ${c.status === 'RESOLVED' ? 'badge-available' : 'badge-reserved'}">${c.status}</span></td>
+                        <td>
+                            ${c.status !== 'RESOLVED' ? `
+                                <button class="btn btn-outline-success btn-sm py-0 px-2" onclick="resolveComplaint(${c.id})">Mark Resolved</button>
+                            ` : `<span class="small text-muted">Resolved</span>`}
+                        </td>
+                    </tr>
+                `).join("");
+            } catch(e) {}
+        }
+
+        async function resolveComplaint(id) {
+            const note = prompt("Enter resolution notes:", "Issue inspected and repaired by maintenance staff.");
+            if (!note) return;
+            try {
+                const res = await API.patch(`/complaints/${id}/status`, { status: "RESOLVED", note });
+                if (res.success) {
+                    alert("Ticket marked as resolved.");
+                    refreshDashboard();
+                }
+            } catch(err) {
+                alert(err.message || "Failed to update complaint.");
+            }
+        }
+
+        function openAddPropertyModal() {
+            new bootstrap.Modal(document.getElementById("addPropertyModal")).show();
+        }
+
+        async function submitAddProperty(e) {
+            e.preventDefault();
+            const payload = {
+                name: document.getElementById("prop-in-name").value.trim(),
+                property_type: document.getElementById("prop-in-type").value,
+                address_line1: document.getElementById("prop-in-addr1").value.trim(),
+                locality: document.getElementById("prop-in-locality").value.trim(),
+                city: document.getElementById("prop-in-city").value.trim(),
+                state: document.getElementById("prop-in-state").value.trim(),
+                pincode: document.getElementById("prop-in-pin").value.trim(),
+                latitude: parseFloat(document.getElementById("prop-in-lat").value),
+                longitude: parseFloat(document.getElementById("prop-in-lng").value),
+                description: document.getElementById("prop-in-desc").value.trim()
+            };
+
+            try {
+                const res = await API.post("/properties", payload);
+                if (res.success) {
+                    bootstrap.Modal.getInstance(document.getElementById("addPropertyModal")).hide();
+                    alert("Property registered successfully.");
+                    await loadOwnerProperties();
+                }
+            } catch(err) {
+                alert(err.message || "Failed to create property.");
+            }
+        }
+
+        function openAddRoomModal() {
+            new bootstrap.Modal(document.getElementById("addRoomModal")).show();
+        }
+
+        async function submitAddRoom(e) {
+            e.preventDefault();
+            const payload = {
+                room_number: document.getElementById("room-in-number").value.trim(),
+                floor_number: parseInt(document.getElementById("room-in-floor").value),
+                sharing_type: document.getElementById("room-in-sharing").value,
+                monthly_rent_per_bed: parseFloat(document.getElementById("room-in-rent").value),
+                security_deposit_per_bed: parseFloat(document.getElementById("room-in-deposit").value),
+                has_ac: document.getElementById("room-in-ac").checked,
+                has_attached_bathroom: document.getElementById("room-in-bath").checked
+            };
+
+            try {
+                const res = await API.post(`/properties/${currentPropId}/rooms`, payload);
+                if (res.success) {
+                    bootstrap.Modal.getInstance(document.getElementById("addRoomModal")).hide();
+                    document.getElementById("add-room-form").reset();
+                    alert(res.message);
+                    refreshDashboard();
+                }
+            } catch(err) {
+                alert(err.message || "Failed to add room.");
+            }
+        }
+
+        function downloadPropertyExcel() {
+            window.location.href = `/api/reports/properties/${currentPropId}/excel`;
+        }
+    </script>
+</body>
+</html>

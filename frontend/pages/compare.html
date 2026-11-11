@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Compare PG Accommodations | PG Connect</title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/css/main.css">
+</head>
+<body>
+    <div id="site-header"></div>
+
+    <div class="container py-4">
+        <nav aria-label="breadcrumb" class="mb-3">
+            <ol class="breadcrumb small">
+                <li class="breadcrumb-item"><a href="/">Home</a></li>
+                <li class="breadcrumb-item"><a href="/pages/search.html">Explore PGs</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Compare Properties</li>
+            </ol>
+        </nav>
+
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h1 class="h3 fw-bold mb-1">Side-by-Side PG Comparison</h1>
+                <p class="text-muted small mb-0">Evaluate rent, room types, bed vacancy, and verified amenities.</p>
+            </div>
+            <div class="d-flex gap-2">
+                <select class="form-select form-select-sm" id="add-compare-select" style="max-width: 260px;">
+                    <option value="">Select a PG to add to comparison...</option>
+                </select>
+                <button class="btn btn-outline-primary btn-sm" onclick="addSelectedProperty()">Add to Compare</button>
+            </div>
+        </div>
+
+        <div class="card p-3 mb-4 overflow-auto">
+            <table class="table table-bordered text-center align-middle" id="compare-table">
+                <thead id="compare-thead">
+                    <!-- Populated dynamically -->
+                </thead>
+                <tbody id="compare-tbody">
+                    <!-- Rows for Rent, Deposit, Beds, Wi-Fi, AC, etc. -->
+                </tbody>
+            </table>
+            <div id="compare-empty-state" class="empty-state py-5 text-center" style="display: none;">
+                <h5>No properties selected for comparison</h5>
+                <p class="small text-muted">Use the dropdown above or browse properties to compare features.</p>
+                <a href="/pages/search.html" class="btn btn-primary btn-sm">Explore PGs</a>
+            </div>
+        </div>
+    </div>
+
+    <div id="site-footer"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/js/config.js"></script>
+    <script src="/js/api.js"></script>
+    <script src="/js/auth.js"></script>
+    <script src="/js/main.js"></script>
+    <script>
+        let comparedPropertyIds = [];
+        let allPropertiesList = [];
+
+        document.addEventListener("DOMContentLoaded", async () => {
+            const params = new URLSearchParams(window.location.search);
+            const idsParam = params.get("ids");
+            if (idsParam) {
+                comparedPropertyIds = idsParam.split(",").map(i => parseInt(i)).filter(i => !isNaN(i));
+            } else {
+                // Default comparison of initial properties
+                comparedPropertyIds = [1, 2];
+            }
+
+            await loadAllPropertiesDropdown();
+            await renderComparisonTable();
+        });
+
+        async function loadAllPropertiesDropdown() {
+            try {
+                const res = await API.get("/properties/search", { per_page: 50 });
+                if (res.success && res.data.items) {
+                    allPropertiesList = res.data.items;
+                    const select = document.getElementById("add-compare-select");
+                    allPropertiesList.forEach(p => {
+                        select.innerHTML += `<option value="${p.id}">${p.name} (${p.locality}, ${p.city})</option>`;
+                    });
+                }
+            } catch(e) {}
+        }
+
+        async function renderComparisonTable() {
+            const table = document.getElementById("compare-table");
+            const emptyState = document.getElementById("compare-empty-state");
+
+            if (comparedPropertyIds.length === 0) {
+                table.style.display = "none";
+                emptyState.style.display = "block";
+                return;
+            }
+
+            table.style.display = "table";
+            emptyState.style.display = "none";
+
+            try {
+                const res = await API.get("/properties/compare", { ids: comparedPropertyIds.join(",") });
+                if (!res.success || !res.data || res.data.length === 0) {
+                    table.style.display = "none";
+                    emptyState.style.display = "block";
+                    return;
+                }
+
+                const props = res.data;
+
+                // Build Table Header
+                let thead = `<tr><th style="width: 220px; text-align: left;">Feature / Property</th>`;
+                props.forEach(p => {
+                    thead += `
+                        <th style="min-width: 220px;">
+                            <div class="fw-bold mb-1">${p.name}</div>
+                            <span class="badge bg-light text-dark border mb-2">${p.property_type}</span><br>
+                            <button class="btn btn-outline-danger btn-sm py-0 px-2 small" onclick="removeProperty(${p.id})">Remove</button>
+                        </th>
+                    `;
+                });
+                thead += `</tr>`;
+                document.getElementById("compare-thead").innerHTML = thead;
+
+                // Build Comparison Rows
+                const rows = [
+                    { label: "City & Locality", fn: p => `${p.locality}, ${p.city}` },
+                    { label: "Starting Monthly Rent", fn: p => `<strong>${formatCurrency(p.min_rent)}/mo</strong>` },
+                    { label: "Available Beds", fn: p => `<span class="badge ${p.available_beds > 0 ? 'badge-available' : 'badge-occupied'}">${p.available_beds} Available</span>` },
+                    { label: "Total Physical Beds", fn: p => `${p.total_beds} Beds` },
+                    { label: "Notice Period", fn: p => `${p.notice_period_days} Days` },
+                    { label: "Gate Closing Time", fn: p => p.gate_closing_time || "22:30 IST" },
+                    { label: "Wi-Fi Facility", fn: p => p.facilities?.has_wifi ? "[Yes] Available" : "[No] Not Provided" },
+                    { label: "Air Conditioning", fn: p => p.facilities?.has_ac ? "[Yes] Available" : "[No] Non-AC" },
+                    { label: "Washing Machine", fn: p => p.facilities?.has_washing_machine ? "[Yes] Available" : "[No] Not Provided" },
+                    { label: "CCTV Security", fn: p => p.facilities?.has_cctv ? "[Yes] 24/7 Monitored" : "[No] Not Available" },
+                    { label: "Power Backup", fn: p => p.facilities?.has_power_backup ? "[Yes] Generator/Inverter" : "[No] Not Provided" },
+                    { label: "Action", fn: p => `<a href="/pages/pg-details.html?id=${p.id}" class="btn btn-primary btn-sm">View Details</a>` }
+                ];
+
+                let tbody = "";
+                rows.forEach(r => {
+                    tbody += `<tr><td class="text-start fw-semibold text-muted bg-light">${r.label}</td>`;
+                    props.forEach(p => {
+                        tbody += `<td>${r.fn(p)}</td>`;
+                    });
+                    tbody += `</tr>`;
+                });
+
+                document.getElementById("compare-tbody").innerHTML = tbody;
+            } catch (err) {
+                table.style.display = "none";
+                emptyState.style.display = "block";
+            }
+        }
+
+        function addSelectedProperty() {
+            const select = document.getElementById("add-compare-select");
+            const val = parseInt(select.value);
+            if (!val) return;
+            if (comparedPropertyIds.includes(val)) {
+                alert("This property is already in the comparison table.");
+                return;
+            }
+            if (comparedPropertyIds.length >= 4) {
+                alert("You can compare up to 4 properties at a time.");
+                return;
+            }
+            comparedPropertyIds.push(val);
+            updateUrl();
+            renderComparisonTable();
+        }
+
+        function removeProperty(id) {
+            comparedPropertyIds = comparedPropertyIds.filter(i => i !== id);
+            updateUrl();
+            renderComparisonTable();
+        }
+
+        function updateUrl() {
+            const url = new URL(window.location);
+            if (comparedPropertyIds.length > 0) {
+                url.searchParams.set("ids", comparedPropertyIds.join(","));
+            } else {
+                url.searchParams.delete("ids");
+            }
+            window.history.replaceState({}, "", url);
+        }
+    </script>
+</body>
+</html>

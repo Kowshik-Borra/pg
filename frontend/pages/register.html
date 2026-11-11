@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register Account | PG Connect</title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/css/main.css">
+</head>
+<body class="bg-light">
+    <div id="site-header"></div>
+
+    <div class="container py-5">
+        <div class="row justify-content-center">
+            <div class="col-md-8 col-lg-6">
+                <div class="card p-4">
+                    <div class="text-center mb-4">
+                        <h2 class="h4 fw-bold mb-1">Create Your PG Connect Account</h2>
+                        <p class="text-muted small">Choose your account type to get started.</p>
+                    </div>
+
+                    <!-- Role Switcher Tabs -->
+                    <ul class="nav nav-pills nav-fill mb-4 border p-1 rounded" id="role-tabs">
+                        <li class="nav-item">
+                            <button class="nav-link active py-2" id="tab-tenant" onclick="switchRole('TENANT')">Customer / Tenant</button>
+                        </li>
+                        <li class="nav-item">
+                            <button class="nav-link py-2" id="tab-owner" onclick="switchRole('OWNER')">PG Property Owner</button>
+                        </li>
+                    </ul>
+
+                    <div class="alert alert-danger py-2 small" id="reg-error" style="display: none;"></div>
+
+                    <form id="reg-form" onsubmit="handleRegister(event)">
+                        <!-- Common Fields -->
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label small fw-semibold">Full Name *</label>
+                                <input type="text" class="form-control" id="reg-name" required placeholder="John Doe">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small fw-semibold">Phone Number *</label>
+                                <input type="tel" class="form-control" id="reg-phone" required placeholder="9876543210">
+                            </div>
+                        </div>
+
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label small fw-semibold">Email Address *</label>
+                                <input type="email" class="form-control" id="reg-email" required placeholder="name@example.com">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small fw-semibold">Password * (Min 8 chars)</label>
+                                <input type="password" class="form-control" id="reg-password" required minlength="8" placeholder="Create password">
+                            </div>
+                        </div>
+
+                        <!-- Tenant Specific Fields -->
+                        <div id="tenant-fields">
+                            <h6 class="fw-bold border-bottom pb-2 mb-3 mt-4">Verification & Emergency Contact</h6>
+                            <div class="row g-3 mb-3">
+                                <div class="col-md-4">
+                                    <label class="form-label small fw-semibold">Emergency Contact</label>
+                                    <input type="text" class="form-control" id="reg-emg-name" placeholder="Name">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label small fw-semibold">Emergency Phone</label>
+                                    <input type="tel" class="form-control" id="reg-emg-phone" placeholder="Phone">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label small fw-semibold">Relationship</label>
+                                    <input type="text" class="form-control" id="reg-emg-rel" placeholder="e.g. Parent">
+                                </div>
+                            </div>
+
+                            <div class="row g-3 mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-semibold">ID Proof Type</label>
+                                    <select class="form-select" id="reg-id-type">
+                                        <option value="Aadhaar Card">Aadhaar Card</option>
+                                        <option value="Passport">Passport</option>
+                                        <option value="Driving License">Driving License</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-semibold">ID Number (Masked)</label>
+                                    <input type="text" class="form-control" id="reg-id-num" placeholder="XXXX-XXXX-1234">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Owner Specific Fields -->
+                        <div id="owner-fields" style="display: none;">
+                            <h6 class="fw-bold border-bottom pb-2 mb-3 mt-4">Business Information</h6>
+                            <div class="mb-3">
+                                <label class="form-label small fw-semibold">Business / PG Enterprise Name *</label>
+                                <input type="text" class="form-control" id="reg-business-name" placeholder="e.g. Sharma Hospitality Stays">
+                            </div>
+
+                            <div class="row g-3 mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-semibold">PAN Card Number</label>
+                                    <input type="text" class="form-control" id="reg-pan" placeholder="ABCDE1234F">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-semibold">Aadhaar Last 4 Digits</label>
+                                    <input type="text" class="form-control" id="reg-aadhaar" maxlength="4" placeholder="1234">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-check mb-4 mt-3">
+                            <input class="form-check-input" type="checkbox" id="reg-terms" required>
+                            <label class="form-check-label small text-muted" for="reg-terms">
+                                I agree to the <a href="/pages/terms-conditions.html" target="_blank">Terms & Conditions</a> and <a href="/pages/privacy-policy.html" target="_blank">Privacy Policy</a>.
+                            </label>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary w-100 py-2" id="reg-submit-btn">
+                            Create Account
+                        </button>
+                    </form>
+
+                    <div class="text-center small text-muted mt-3">
+                        Already have an account? <a href="/pages/login.html">Sign In</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="site-footer"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/js/config.js"></script>
+    <script src="/js/api.js"></script>
+    <script src="/js/auth.js"></script>
+    <script src="/js/main.js"></script>
+    <script>
+        let selectedRole = "TENANT";
+
+        document.addEventListener("DOMContentLoaded", () => {
+            const roleParam = new URLSearchParams(window.location.search).get("role");
+            if (roleParam === "OWNER") {
+                switchRole("OWNER");
+            }
+        });
+
+        function switchRole(role) {
+            selectedRole = role;
+            const tabTenant = document.getElementById("tab-tenant");
+            const tabOwner = document.getElementById("tab-owner");
+            const tenantFields = document.getElementById("tenant-fields");
+            const ownerFields = document.getElementById("owner-fields");
+
+            if (role === "OWNER") {
+                tabOwner.classList.add("active");
+                tabTenant.classList.remove("active");
+                tenantFields.style.display = "none";
+                ownerFields.style.display = "block";
+            } else {
+                tabTenant.classList.add("active");
+                tabOwner.classList.remove("active");
+                tenantFields.style.display = "block";
+                ownerFields.style.display = "none";
+            }
+        }
+
+        async function handleRegister(e) {
+            e.preventDefault();
+            const btn = document.getElementById("reg-submit-btn");
+            const errDiv = document.getElementById("reg-error");
+            errDiv.style.display = "none";
+            btn.disabled = true;
+
+            const payload = {
+                role: selectedRole,
+                full_name: document.getElementById("reg-name").value.trim(),
+                phone: document.getElementById("reg-phone").value.trim(),
+                email: document.getElementById("reg-email").value.trim(),
+                password: document.getElementById("reg-password").value
+            };
+
+            if (selectedRole === "TENANT") {
+                payload.emergency_contact_name = document.getElementById("reg-emg-name").value.trim();
+                payload.emergency_contact_phone = document.getElementById("reg-emg-phone").value.trim();
+                payload.emergency_contact_relation = document.getElementById("reg-emg-rel").value.trim();
+                payload.id_proof_type = document.getElementById("reg-id-type").value;
+                payload.id_proof_number_masked = document.getElementById("reg-id-num").value.trim();
+            } else if (selectedRole === "OWNER") {
+                payload.business_name = document.getElementById("reg-business-name").value.trim();
+                payload.pan_number = document.getElementById("reg-pan").value.trim();
+                payload.aadhaar_last4 = document.getElementById("reg-aadhaar").value.trim();
+            }
+
+            try {
+                await Auth.register(payload);
+            } catch (err) {
+                errDiv.innerText = err.message || "Registration failed. Please check your details.";
+                errDiv.style.display = "block";
+            } finally {
+                btn.disabled = false;
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,158 @@
+{
+  "info": {
+    "name": "PG Connect API Collection",
+    "description": "Production REST API collection for PG Connect platform discovery, vacancy tracking, and business management.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://127.0.0.1:5000/api",
+      "type": "string"
+    },
+    {
+      "key": "auth_token",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Sign In (PG Owner)",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"owner.rajesh@pgconnect.com\",\n  \"password\": \"Owner@12345\"\n}"
+            },
+            "url": {"raw": "{{base_url}}/auth/login", "host": ["{{base_url}}"], "path": ["auth", "login"]}
+          }
+        },
+        {
+          "name": "Sign In (Tenant)",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"tenant.rahul@gmail.com\",\n  \"password\": \"Tenant@12345\"\n}"
+            },
+            "url": {"raw": "{{base_url}}/auth/login", "host": ["{{base_url}}"], "path": ["auth", "login"]}
+          }
+        },
+        {
+          "name": "Current Profile",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{auth_token}}"}],
+            "url": {"raw": "{{base_url}}/auth/me", "host": ["{{base_url}}"], "path": ["auth", "me"]}
+          }
+        }
+      ]
+    },
+    {
+      "name": "Properties",
+      "item": [
+        {
+          "name": "Search PGs",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/properties/search?city=Bengaluru&gender=BOYS",
+              "host": ["{{base_url}}"],
+              "path": ["properties", "search"],
+              "query": [{"key": "city", "value": "Bengaluru"}, {"key": "gender", "value": "BOYS"}]
+            }
+          }
+        },
+        {
+          "name": "Get Property Details",
+          "request": {
+            "method": "GET",
+            "url": {"raw": "{{base_url}}/properties/1", "host": ["{{base_url}}"], "path": ["properties", "1"]}
+          }
+        },
+        {
+          "name": "Compare Properties",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/properties/compare?ids=1,2",
+              "host": ["{{base_url}}"],
+              "path": ["properties", "compare"],
+              "query": [{"key": "ids", "value": "1,2"}]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Bookings",
+      "item": [
+        {
+          "name": "Request Booking",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{auth_token}}"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"property_id\": 1,\n  \"room_id\": 1,\n  \"bed_id\": 2,\n  \"preferred_move_in_date\": \"2026-12-01\"\n}"
+            },
+            "url": {"raw": "{{base_url}}/bookings", "host": ["{{base_url}}"], "path": ["bookings"]}
+          }
+        },
+        {
+          "name": "Approve Booking (Owner)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{auth_token}}"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"remarks\": \"Approved. Bed reserved for 48 hours.\"\n}"
+            },
+            "url": {"raw": "{{base_url}}/bookings/1/approve", "host": ["{{base_url}}"], "path": ["bookings", "1", "approve"]}
+          }
+        }
+      ]
+    },
+    {
+      "name": "Finance & Reports",
+      "item": [
+        {
+          "name": "Property Financial Summary",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{auth_token}}"}],
+            "url": {"raw": "{{base_url}}/finance/summary/property/1", "host": ["{{base_url}}"], "path": ["finance", "summary", "property", "1"]}
+          }
+        },
+        {
+          "name": "Download PDF Invoice Receipt",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{auth_token}}"}],
+            "url": {"raw": "{{base_url}}/reports/invoices/1/pdf", "host": ["{{base_url}}"], "path": ["reports", "invoices", "1", "pdf"]}
+          }
+        },
+        {
+          "name": "Download Property Excel Report",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{auth_token}}"}],
+            "url": {"raw": "{{base_url}}/reports/properties/1/excel", "host": ["{{base_url}}"], "path": ["reports", "properties", "1", "excel"]}
+          }
+        }
+      ]
+    }
+  ]
+}
